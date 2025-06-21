@@ -1,5 +1,3 @@
-# AWS Lambda
-
 <p align="center">
 	<img src="./img/aws-icons/aws-Lambda.png" alt="aws-lambda-icon" style="height:150px; width:150px;" /> 
   <br />
