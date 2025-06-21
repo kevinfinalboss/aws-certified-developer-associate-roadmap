@@ -1,5 +1,5 @@
 <p align="center">
-	<img src="https://cdn.worldvectorlogo.com/logos/aws-cloudtrail.svg" alt="aws-cloudtrail-icon" style="height:150px; width:150px;" /> 
+	<img src="./img/aws-icons/aws-CloudTrail.png" alt="aws-cloudtrail-icon" style="height:150px; width:150px;" /> 
   <br />
 	<h1 align="center">
     CloudTrail
