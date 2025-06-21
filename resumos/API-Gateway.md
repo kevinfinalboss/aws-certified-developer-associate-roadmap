@@ -11,15 +11,22 @@
 ## 📌 Índice
 
 - [Introdução](#introdução)
+- [Tipos de API: REST x HTTP x WebSocket](#tipos-de-api-rest-x-http-x-websocket)
 - [Estágios de implantação](#estágios-de-implantação)
-- [Caching respostas da API](#caching-respostas-da-api)
+- [Caching de respostas](#caching-de-respostas)
   - [Invalidação de Cache](#invalidação-de-cache)
 - [Plano de uso e chaves de API](#plano-de-uso-e-chaves-de-api)
 - [Registro e Rastreamento](#registro-e-rastreamento)
   - [Métricas CloudWatch](#métricas-cloudwatch)
-- [Throttling](#throttling)
-- [Erros](#erros)
-- [Segurança](#segurança)  
+- [Throttling e Quotas](#throttling-e-quotas)
+- [Segurança](#segurança)
+- [Integrações suportadas](#integrações-suportadas)
+- [Transformação de Payload (Mapping Templates)](#transformação-de-payload-mapping-templates)
+- [VPC Link](#vpc-link)
+- [CORS](#cors)
+- [Custom Domain Names](#custom-domain-names)
+- [Deployment Canary](#deployment-canary)
+- [Erros Comuns](#erros-comuns)
 - [Exemplos de Questões de Prova](#exemplos-de-questões-de-prova)
 - [📚 Referências](#📚-referências)
 
@@ -27,131 +34,195 @@
 
 ## Introdução
 
-Amazon API Gateway é um serviço totalmente gerenciado da AWS que permite **criar, publicar, monitorar, proteger e manter APIs REST, HTTP e WebSocket** em escala.
+O Amazon API Gateway é um serviço totalmente gerenciado da AWS para criação, publicação, manutenção, monitoramento e segurança de APIs em escala.
 
-Serve como **ponto único de entrada** para chamadas de APIs que se integram com backends como **Lambda**, **serviços AWS**, ou **endpoints HTTP externos**.
-
----
-
-## Estágios de implantação
-
-Para que as alterações feitas no API Gateway entrem em vigor, é necessário fazer a **implantação (Deploy)** para um **Stage** (ex: `dev`, `homolog`, `prod`).
-
-Cada **Stage** pode ter:
-
-- **Variáveis de ambiente**
-- **Logs customizados**
-- **Cache**
-- **Throttling**
-- **Planos de Uso**
+Ele suporta **3 tipos principais de APIs**:
 
 ---
 
-## Caching respostas da API
+## Tipos de API: REST x HTTP x WebSocket
 
-O cache reduz o número de chamadas feitas ao backend. Ele é configurado por **Stage**, mas pode ser sobrescrito por método.
-
-| Recurso | Valor |
-|---|---|
-| **TTL padrão** | 300 segundos (5 minutos) |
-| **Intervalo permitido** | 0 a 3600 segundos (1 hora) |
-| **Tamanhos de cache** | 0.5GB a 237GB |
-| **Criptografia** | Suportada |
-
-**💡 Dica de prova:** Cache é caro → Geralmente recomendado só em produção.
+| Tipo | Características | Quando Usar |
+|---|---|---|
+| **REST API** | Mais recursos, suporta **caching**, **usage plans**, **transformação de payload**, **Lambda Authorizers** | Sistemas legados ou com necessidade de recursos avançados |
+| **HTTP API** | Mais simples, **baixa latência**, **baixo custo**, **OAuth2 + JWT**, **Cognito Authorizer**, **Lambda Proxy**, não suporta cache nem usage plans | Microserviços, apps modernos |
+| **WebSocket API** | Comunicação **bidirecional em tempo real** | Chat apps, games online, notificações push |
 
 ---
 
-### Invalidação de Cache
+## Estágios de Implantação
 
-- Manualmente via Console AWS.
-- Ou programaticamente pelos clientes via Header HTTP:
+Cada **Stage** representa um ambiente (ex: dev, qa, prod).
 
+Recursos por Stage:
 
-> ⚠️ Importante: Para invalidar o cache via API, o cliente precisa ter permissão adequada no IAM.
+- Variáveis de Stage
+- Logs
+- Cache
+- Throttling
+- Deployment Canary (ver mais abaixo)
+
+**Dica:** Alterações feitas na API só entram em vigor após um **Deploy para um Stage**.
 
 ---
 
-## Plano de uso e chaves de API
+## Caching de Respostas
 
-Os **Planos de Uso (Usage Plans)** controlam:
+Habilitável apenas para **REST APIs**.
 
-- **Quem** pode acessar
-- **Velocidade (Rate Limit)**: Exemplo → X requisições por segundo
-- **Quota**: Exemplo → Y requisições por dia/mês
-- **Associação com Stages e Métodos**
+- TTL padrão: 300 segundos
+- Intervalo: 0-3600 segundos
+- Tamanhos: 0.5GB até 237GB
+- Criptografia: Suportada
 
-As **API Keys** identificam os clientes e medem o consumo.
+**Invalidação:**
 
-> **Importante:** Apenas APIs do tipo **REST API** suportam **Usage Plans + API Keys**.
+- Manual
+- Via Header (`Cache-Control: max-age=0`)  
+- Requer IAM Policy
+
+---
+
+## Plano de Uso e Chaves de API
+
+- Apenas para **REST APIs**
+- Controlam: **Rate Limits**, **Quota**, **Associação com Stages**
+- Chaves de API identificam clientes
+
+**Dica:** Não confunda: **HTTP APIs não têm Usage Plan nem API Keys**.
 
 ---
 
 ## Registro e Rastreamento
 
-O API Gateway permite:
-
-- **Logs de execução e acesso** → enviados para o **CloudWatch Logs**
-- **Nível de stage** → Configurações podem ser personalizadas por stage ou por método
-- **Integração com AWS X-Ray** → Para rastreamento detalhado das requisições e latências.
-
----
-
-### Métricas CloudWatch
-
-| Métrica | Descrição |
+| Recurso | Suporte |
 |---|---|
-| **CacheHitCount** | Quantidade de requisições atendidas pelo cache |
-| **CacheMissCount** | Quantidade de requisições que não encontraram resposta em cache |
-| **Count** | Número total de requisições |
-| **IntegrationLatency** | Tempo gasto na integração com o backend (exemplo: Lambda) |
-| **Latency** | Tempo total entre a requisição do cliente e a resposta (incluindo o tempo de integração) |
+| **CloudWatch Logs** | Sim |
+| **CloudWatch Metrics** | Sim |
+| **X-Ray** | Sim |
 
-**⚠️ Interpretação de CacheMissCount:**  
-Se o valor for alto → indica baixa eficiência do cache (muitas requisições não estão sendo atendidas via cache).
+Exemplos de métricas:
 
----
-
-## Throttling
-
-- **Limite por conta AWS:** Por padrão o API Gateway permite até **10.000 requisições por segundo por conta**.
-- Se uma API atingir muito uso, **outras APIs da mesma conta também podem ser impactadas** (compartilham o mesmo limite).
-
-> **Erro mais comum:**  
-**HTTP 429 - Too Many Requests**
-
-**Opções para limitar requisições:**
-
-- Definir **limite por Stage**
-- Definir **limite por Método**
-- Usar **Planos de Uso** com **API Keys**, limitando por cliente.
+- Latency
+- IntegrationLatency
+- 4XXError, 5XXError
+- CacheHitCount / CacheMissCount
 
 ---
 
-## Erros
+## Throttling e Quotas
 
-| Código | Descrição |
-|---|---|
-| **400** | Bad Request - Requisição malformada |
-| **403** | Access Denied - Acesso negado (ex: WAF ou Resource Policy) |
-| **429** | Too Many Requests - Limite ou quota excedida |
-| **502** | Bad Gateway - Exemplo: Lambda não respondeu corretamente |
-| **503** | Service Unavailable - Backend indisponível |
-| **504** | Integration Failure - Timeout na integração (limite de 29 segundos no backend) |
+**Limites Globais:**  
+10.000 RPS (por conta por região)
+
+**Limites Configuráveis:**
+
+- Por Stage
+- Por Método
+- Por Cliente (com Usage Plans)
+
+**Erros comuns:**
+
+- **429 - Too Many Requests**
+- **403 - Access Denied** (se throttle policy do IAM negar)
 
 ---
 
 ## Segurança
 
-| Opção | Descrição |
+| Recurso | Tipo |
 |---|---|
-| **Permissões IAM** | Controle para usuários/funções dentro da AWS |
-| **Resource Policies** | Controle de acesso entre contas AWS ou por IP |
-| **Cognito User Pools** | Autenticação gerenciada de usuários finais |
-| **Lambda Authorizer (Custom Authorizer)** | Lógica de autenticação customizada (ex: tokens JWT externos) |
+| **IAM Roles/Policies** | Para controle de acesso interno |
+| **Resource Policies** | Controle entre contas ou por IP |
+| **Lambda Authorizer** | Lógica custom (ex: JWT de terceiros) |
+| **Cognito User Pools** | Autenticação integrada |
+| **JWT Authorizer (HTTP APIs)** | Verificação de JWT sem usar Lambda |
 
-**Exemplo de caso de uso de Lambda Authorizer:**  
-Quando você tem um banco de usuários externo, fora do Cognito.
+**Dicas de prova:**
+
+- Se for API REST + JWT → Lambda Authorizer  
+- Se for HTTP API + JWT → Native JWT Authorizer  
+
+---
+
+## Integrações Suportadas
+
+| Tipo | Exemplo |
+|---|---|
+| **AWS Service** | Invocar SNS, SQS, etc |
+| **Lambda Function** | Serverless backend |
+| **HTTP/HTTPS Endpoint** | Chamadas externas |
+| **Mock Integration** | Resposta fixa (útil para testes) |
+
+---
+
+## Transformação de Payload (Mapping Templates)
+
+Apenas para **REST APIs**.
+
+- Permite modificar Request ou Response
+- Exemplo: Converter JSON → XML, ou alterar headers
+- Usado quando precisa adaptar o formato entre cliente e backend.
+
+**Dica de prova:** HTTP APIs **não têm Mapping Templates**.
+
+---
+
+## VPC Link
+
+Permite expor serviços que estão dentro de uma **VPC privada**.
+
+- Exemplo: Integração com um **NLB** (Network Load Balancer)
+- Usado quando o backend não é público.
+
+**Tipo de integração:** **Private Integration**
+
+---
+
+## CORS
+
+Cross-Origin Resource Sharing.
+
+- Permite que navegadores acessem APIs de diferentes domínios.
+
+| Configuração | Onde Fazer |
+|---|---|
+| REST APIs | Via Mapping Templates e Headers |
+| HTTP APIs | Configuração nativa e mais simples |
+
+**Erro comum se não configurar:**  
+**403 Forbidden (CORS Error no browser)**
+
+---
+
+## Custom Domain Names
+
+Permite expor a API por um domínio próprio (ex: `api.meusite.com`)
+
+- Suporta **Base Path Mapping** (ex: `/v1`, `/v2`)
+- Requer configuração de **Route53** e **Certificados SSL via ACM**
+
+---
+
+## Deployment Canary
+
+Permite implantar uma nova versão da API para apenas uma **porcentagem de tráfego** antes de fazer rollout completo.
+
+- Exemplo: Liberar para 10% dos usuários e testar antes de atingir 100%.
+- Suportado apenas em **REST APIs**.
+
+---
+
+## Erros Comuns
+
+| Código | Causa |
+|---|---|
+| 400 | Bad Request |
+| 403 | Access Denied |
+| 429 | Rate limit excedido |
+| 502 | Lambda mal configurada ou erro de integração |
+| 503 | Backend indisponível |
+| 504 | Timeout de 29s na integração |
 
 ---
 
@@ -159,62 +230,50 @@ Quando você tem um banco de usuários externo, fora do Cognito.
 
 ### Questão 1:
 
-**Sua API REST apresenta alta latência. Qual métrica investigar?**
+**Você precisa reduzir a latência geral de uma API REST. O que investigar primeiro?**
 
-- A) CloudTrail  
-- B) IntegrationLatency  
-- C) Resource Policy  
-- D) Cache Hit Ratio  
-
-✅ **Resposta:** B → IntegrationLatency mostra o tempo gasto no backend.
+✅ **Resposta:** IntegrationLatency e uso de Cache.
 
 ---
 
 ### Questão 2:
 
-**Sua API está retornando erro 504. O que pode ser?**
+**Seu cliente quer JWT Auth com o menor esforço de setup. Que tipo de API?**
 
-- A) Problema de autenticação IAM  
-- B) Backend demorou mais de 29 segundos para responder  
-- C) Chave de API inválida  
-- D) Cache expirado  
-
-✅ **Resposta:** B → Timeout na integração (limite de 29 segundos).
+✅ **Resposta:** HTTP API com JWT Authorizer.
 
 ---
 
 ### Questão 3:
 
-**Qual cenário justifica uso de HTTP API ao invés de REST API?**
+**Você precisa integrar API Gateway com um backend privado na VPC. Solução?**
 
-- A) Precisa de cache  
-- B) Transformação de payload  
-- C) Baixo custo e baixa latência  
-- D) Precisa de Usage Plans  
-
-✅ **Resposta:** C → HTTP API é mais barata e rápida.
+✅ **Resposta:** VPC Link.
 
 ---
 
 ### Questão 4:
 
-**Como limitar um cliente a 1000 requisições diárias?**
+**Quer limitar um cliente a 1000 requisições por dia. Qual solução?**
 
-- A) IAM Policy  
-- B) Usage Plan + API Key  
-- C) Lambda Authorizer  
-- D) Configuração de CORS  
+✅ **Resposta:** Usage Plan + API Key (só REST APIs).
 
-✅ **Resposta:** B → Usage Plans são feitos para esse controle.
+---
+
+### Questão 5:
+
+**Precisa fazer transformação de payload antes de enviar ao Lambda.**
+
+✅ **Resposta:** Mapping Template (REST API).
 
 ---
 
 ## 📚 Referências
 
-- [O que é o Amazon API Gateway?](https://docs.aws.amazon.com/pt_br/apigateway/latest/developerguide/welcome.html)
-- [Criar e usar planos de uso com chaves de API](https://docs.aws.amazon.com/pt_br/apigateway/latest/developerguide/api-gateway-api-usage-plans.html)
-- [CloudWatch Metrics for API Gateway](https://docs.aws.amazon.com/pt_br/apigateway/latest/developerguide/api-gateway-metrics-and-dimensions.html)
-- [API Gateway Throttling](https://docs.aws.amazon.com/pt_br/apigateway/latest/developerguide/api-gateway-request-throttling.html)
-- [Caching no API Gateway](https://docs.aws.amazon.com/pt_br/apigateway/latest/developerguide/api-gateway-caching.html)
-
----
+- [AWS API Gateway - Developer Guide](https://docs.aws.amazon.com/pt_br/apigateway/latest/developerguide/welcome.html)
+- [Diferenças entre REST API e HTTP API](https://docs.aws.amazon.com/pt_br/apigateway/latest/developerguide/http-api-vs-rest.html)
+- [Mapping Templates](https://docs.aws.amazon.com/pt_br/apigateway/latest/developerguide/api-gateway-mapping-template-reference.html)
+- [CORS no API Gateway](https://docs.aws.amazon.com/pt_br/apigateway/latest/developerguide/apigateway-enable-cors.html)
+- [API Gateway Metrics](https://docs.aws.amazon.com/pt_br/apigateway/latest/developerguide/api-gateway-metrics-and-dimensions.html)
+- [VPC Link](https://docs.aws.amazon.com/pt_br/apigateway/latest/developerguide/getting-started-with-private-integration.html)
+- [Deployment Canary](https://docs.aws.amazon.com/pt_br/apigateway/latest/developerguide/canary-release.html)
