@@ -1,3 +1,5 @@
+# AWS Lambda
+
 <p align="center">
 	<img src="./img/aws-icons/aws-Lambda.png" alt="aws-lambda-icon" style="height:150px; width:150px;" /> 
   <br />
@@ -6,246 +8,649 @@
   </h1>
 </p>	
 
-## :pushpin: Índice
+## 📋 Índice
 
-- [Introdução](#introdução)
-- [O que é *serverless*](#o-que-é-serverless)
-  - [Serverless na AWS](#serverless-na-aws)
-- [Compatibilidade de linguagens do Lambda](#compatibilidade-de-linguagens-do-lambda)  
-- [Principais integrações do Lambda](#principais-integrações-do-lambda)
-- [Cobrança](#lambda-princing)
-- [Lambda e ALB](#lambda-e-alb)
-  - [ALB Multi-Header Values](#alb-multi-header-values)
-- [Chamadas Síncronas](#chamadas-síncronas)
-- [Chamadas Assíncronas](#chamadas-assíncronas)
-- [Mapeamento de origem do evento](#mapeamento-de-origem-do-evento)
-- [Função de execução do Lambda](#função-de-execução-do-lambda)
-- [Rastreamento Lambda com X-Ray](#rastreamento-lambda-com-x-ray)
+- [Conceitos Fundamentais](#conceitos-fundamentais)
+- [Arquitetura Serverless](#arquitetura-serverless)
+- [Linguagens e Runtime](#linguagens-e-runtime)
+- [Modelos de Invocação](#modelos-de-invocação)
+- [Integrações Principais](#integrações-principais)
+- [Lambda com ALB](#lambda-com-alb)
+- [Event Source Mapping](#event-source-mapping)
+- [Segurança e IAM](#segurança-e-iam)
 - [Lambda e VPC](#lambda-e-vpc)
-- [Simultaneidade e limitações](#simultaneidade-e-limitações)
-- [Camadas Lambda](#camadas-lambda)
-- [Imagens de contêiner](#imagens-de-contêiner)
-- [Lambdas version](#lambda-versions)
-  - [Versões](#versões)
-  - [Alias](#alias)
-- [Limites do Lambda](#limites-do-lambda)
-- [Referências](#book-referências)
+- [Concorrência e Performance](#concorrência-e-performance)
+- [Lambda Layers](#lambda-layers)
+- [Versões e Aliases](#versões-e-aliases)
+- [Container Images](#container-images)
+- [Monitoramento e Debugging](#monitoramento-e-debugging)
+- [Limites e Quotas](#limites-e-quotas)
+- [Pricing](#pricing)
+- [Perguntas e Respostas](#perguntas-e-respostas)
+- [Referências](#referências)
 
-<br />
+---
 
-## Introdução
+## Conceitos Fundamentais
 
-<div align="center">
-<img src="./img/cloud-technology-evolution.png" width="70%" />
-</div>
+### O que é AWS Lambda?
+AWS Lambda é um serviço de computação **serverless** que executa código em resposta a eventos sem necessidade de provisionar ou gerenciar servidores. É um dos serviços mais importantes para o exame AWS Developer.
 
-Lamba é um serviço AWS com arquitetura ***serverless***, a tradução literal é "sem servidor" mas não quer dizer que a infraestrutura será sem servidores e sim uma arquitetura que permite transferir mais das suas responsabilidades operacionais à AWS.
-Este tipo de arquitetura permite criar e executar aplicações e serviços sem preocupações com servidores, como por exemplo o gerenciamento e provisionamento de capacidade (processamento e armazenamento)
+### Características Essenciais:
+- **Event-driven**: Executa em resposta a eventos
+- **Stateless**: Cada execução é independente
+- **Automatically Scaling**: Escala automaticamente conforme demanda
+- **Pay-per-use**: Paga apenas pelo tempo de execução
+- **Managed Service**: AWS gerencia toda infraestrutura
 
-<br />
+### Casos de Uso Principais:
+- APIs backend (com API Gateway)
+- Processamento de dados em tempo real
+- Processamento de arquivos (S3 triggers)
+- Automação e orquestração
+- Microserviços
+- ETL (Extract, Transform, Load)
 
-## O que é *serverless*?
+---
 
-É um novo paradigma onde não existe mais a necessidade de gerenciar servidores. Então, não é que não tem mais servidor e sim que apenas você não precisa gerenciá-lo.
+## Arquitetura Serverless
 
-É somente implantar o código/funções.
+### O que é Serverless?
+Paradigma onde você não gerencia servidores, focando apenas no código. A AWS cuida da infraestrutura, scaling, patching e disponibilidade.
 
-### Serverless na AWS
+### Serviços Serverless na AWS:
+- **Compute**: Lambda, Fargate
+- **Storage**: S3, EFS
+- **Database**: DynamoDB, Aurora Serverless
+- **Integration**: API Gateway, EventBridge, SNS, SQS
+- **Analytics**: Kinesis, Athena
+- **Monitoring**: CloudWatch, X-Ray
 
-- Amazon S3
-- Aurora Serverless
-- AWS API Gateway
-- AWS Cognito
-- AWS Kinesis Data Firehose
-- AWS Lambda
-- AWS SNS & SQS
-- DynamoDB
-- Fargate
-- Step Functions
+### Benefícios Serverless:
+- **Sem gerenciamento de servidor**
+- **Scaling automático**
+- **Billing por uso**
+- **Foco no código de negócio**
+- **Alta disponibilidade nativa**
 
-<br />
+---
 
-## Compatibilidade de linguagens do Lambda
+## Linguagens e Runtime
 
-- C# (.NET Core)
-- C# / Powershell
-- Golang
-- Java
-- Node.js
-- Python
-- Ruby
-- API de Tempo de Execução Customizada (Custom Runtime API): É suportada pela comunidade
+### Runtimes Oficiais:
+- **Python**: 3.8, 3.9, 3.10, 3.11
+- **Node.js**: 16.x, 18.x, 20.x
+- **Java**: 8, 11, 17, 21
+- **C#**: .NET 6, .NET 8
+- **Go**: 1.x
+- **Ruby**: 3.2
+- **PowerShell**: 7.x
 
-<br />
+### Custom Runtime:
+- **Provided.al2**: Para qualquer linguagem
+- **Container Images**: Suporte completo via Docker
+- **Runtime API**: Interface para criar runtimes customizados
 
-## Principais integrações do Lambda
-
-Principais integrações com outros serviços da AWS.
-
-- API Gateway
-- Cognito
-- CloudFront
-- CloudWatch Events / EventBridge
-- CloudWatch Logs
-- DynamoDB
-- Kinesis
-- S3
-- SNS
-- SQS
-
-<br />
-
-## Cobrança
-
-A cobrança é feito por requisição (*requests*).
-O primeiro milhão de requisições a AWS são gratuitas, a partir dessa quantidade é cobrado R$ 0,20 por cada milhão de requisições
-
-<br />
-
-## Lambda e ALB
-
-Para o Lamba e ALB conseguirem trabalhar em conjunto é necessário criar um grupo de destino(target group) e adicionar a função lambda desejada.
-
-### ALB Multi-Header Values
-
-- ALB pode suportar ***multi header values*** (habilitado nas configurações do ALB)
-- Quando você habilita o *multi-value headers*, *headers* HTTP e *query strings* que são enviados com múltiplos valores e mostrados como *arrays* dentro do evento AWS Lambda e objetos de resposta. Exemplo:
-
-```bash
-# HTTP (ALB)
-http://exemplo.com/path?name=Maria&name=João
-
-# JSON (Lambda)
-queryStringParameters: {"name": ["foo", "bar"]}
+### Estrutura da Função:
+```python
+def lambda_handler(event, context):
+    # event: dados do trigger
+    # context: informações do runtime
+    return {
+        'statusCode': 200,
+        'body': 'Hello World'
+    }
 ```
 
-<br />
+---
 
-## Chamadas Síncrona
+## Modelos de Invocação
 
-Quando uma função lambda é chamada, a função é executada e aguarda uma resposta.
+### 1. Invocação Síncrona
+- **Aguarda resposta**: Cliente espera resultado
+- **Timeout**: Máximo 15 minutos
+- **Error Handling**: Erros retornados diretamente
+- **Exemplos**: API Gateway, ALB, CLI/SDK
 
-## Chamadas Assíncronas
+**Fluxo:**
+```
+Client → Lambda → Response
+```
 
-Quando uma função lambda é chamada, a função é executada e aguarda uma resposta.
+### 2. Invocação Assíncrona
+- **Fire and forget**: Cliente não espera resposta
+- **Retry**: 2 tentativas automáticas em caso de erro
+- **DLQ**: Dead Letter Queue para falhas
+- **Exemplos**: S3, SNS, EventBridge, CloudWatch Events
 
-<br />
+**Fluxo:**
+```
+Event Source → Event Queue → Lambda
+```
 
-## Mapeamento de origem do evento
+### 3. Event Source Mapping
+- **Poll-based**: Lambda consulta a fonte
+- **Batch Processing**: Processa lotes de registros
+- **Parallelization**: Múltiplos workers simultâneos
+- **Exemplos**: Kinesis, DynamoDB Streams, SQS
 
-Última categoria de como o Lambda pode processar eventos na AWS. Aplica-se a: Kinesis Data Streams, SQS, SQS FIFO queue e DynamoDB Streams.
+**Fluxo:**
+```
+Event Source ← Lambda (polling)
+```
 
-A invocação da função lambda é síncrona.
+---
 
-> Quando você usa o mapeamento de origem do evento para invocar a sua função, o Lambda usa a função de execução(IAM Role) para ler os dados do evento
->
+## Integrações Principais
 
-<br />
+### API Gateway + Lambda
+- **RESTful APIs**: Criação de APIs completas
+- **Authentication**: Cognito, IAM, Custom Authorizers
+- **Rate Limiting**: Throttling e quotas
+- **Caching**: Cache de respostas
+- **CORS**: Cross-Origin Resource Sharing
 
-## Função de execução do Lambda
+### S3 + Lambda
+- **Event Notifications**: Object created, deleted, modified
+- **Event Filtering**: Por prefixo, sufixo, tamanho
+- **Permissions**: Resource-based policy necessária
+- **Considerations**: Evitar loops infinitos
 
-A **função de execução(IAM *Role*)** garante a Lambda permissões para serviços/recursos da AWS.
+### DynamoDB + Lambda
+- **DynamoDB Streams**: Captura mudanças em tempo real
+- **Event Types**: INSERT, MODIFY, REMOVE
+- **Batch Size**: 1-10.000 registros
+- **Parallelization**: Por shard
 
-Uma boa prática é criar uma função de execução por função Lambda.
+### SQS + Lambda
+- **Standard Queue**: Até 10 mensagens por invocação
+- **FIFO Queue**: Processa em ordem
+- **Batch Size**: Configurável (1-10.000)
+- **Visibility Timeout**: Importante para reprocessamento
 
-Se a função lambda for invocada por outros serviços, é utilizado a política baseada em recursos(*Resource Based Policies*), que dá para outras contas AWS e serviços a permissão para usar o seu recurso Lambda.
+---
 
-<br />
+## Lambda com ALB
 
-## Rastreamento Lambda com X-Ray
+### Configuração:
+1. **Target Group**: Criar com tipo "Lambda function"
+2. **Health Checks**: Não aplicável para Lambda
+3. **Multi-Value Headers**: Suporte a arrays em headers/query params
 
-Variáveis de Ambiente que se comunicam com o X-Ray:
+### Request Format:
+```json
+{
+    "requestContext": {
+        "elb": {
+            "targetGroupArn": "arn:aws:elasticloadbalancing:..."
+        }
+    },
+    "httpMethod": "GET",
+    "path": "/path",
+    "queryStringParameters": {"param": "value"},
+    "headers": {"Host": "example.com"},
+    "body": "",
+    "isBase64Encoded": false
+}
+```
 
-- _X_AMZN_TRACE_ID
-- AWS_XRAY_CONTEXT_MISSING
-- AWS_XRAY_DAEMON_ADDRESS
+### Response Format:
+```json
+{
+    "statusCode": 200,
+    "statusDescription": "200 OK",
+    "headers": {"Content-Type": "application/json"},
+    "body": "Hello World",
+    "isBase64Encoded": false
+}
+```
 
-<br />
+### Multi-Header Values:
+```bash
+# URL: http://example.com/path?name=João&name=Maria
+# Lambda Event:
+"multiValueQueryStringParameters": {
+    "name": ["João", "Maria"]
+}
+```
+
+---
+
+## Event Source Mapping
+
+### Conceito:
+Configuração que instrui Lambda a ler de event sources que não fazem push de eventos (Kinesis, DynamoDB Streams, SQS).
+
+### Características:
+- **Lambda faz polling**: Consulta a fonte regularmente
+- **Batch Processing**: Processa múltiplos registros
+- **Error Handling**: Retry logic configurável
+- **Scaling**: Aumenta workers conforme necessário
+
+### Configurações Importantes:
+- **Batch Size**: Quantos registros por invocação
+- **Maximum Batching Window**: Tempo para formar batch
+- **Starting Position**: TRIM_HORIZON, LATEST, AT_TIMESTAMP
+- **Parallelization Factor**: Número de workers por shard
+
+### Error Handling:
+- **Retry**: Configurável por source
+- **Dead Letter Queue**: Para mensagens que falharam
+- **Bisect on Error**: Divide batch em caso de erro
+- **Maximum Record Age**: Descarta registros antigos
+
+---
+
+## Segurança e IAM
+
+### Execution Role (Obrigatória):
+Role que Lambda assume para executar a função.
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "logs:CreateLogGroup",
+                "logs:CreateLogStream",
+                "logs:PutLogEvents"
+            ],
+            "Resource": "arn:aws:logs:*:*:*"
+        }
+    ]
+}
+```
+
+### Resource-Based Policy:
+Controla quem pode invocar a função.
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": {"Service": "s3.amazonaws.com"},
+            "Action": "lambda:InvokeFunction",
+            "Resource": "arn:aws:lambda:us-east-1:123456789012:function:MyFunction"
+        }
+    ]
+}
+```
+
+### Managed Policies Importantes:
+- **AWSLambdaBasicExecutionRole**: Logs básicos
+- **AWSLambdaVPCAccessExecutionRole**: Acesso VPC
+- **AWSLambdaKinesisExecutionRole**: Kinesis streams
+- **AWSLambdaDynamoDBExecutionRole**: DynamoDB streams
+
+### Environment Variables:
+- **Encryption**: KMS encryption disponível
+- **Size Limit**: 4KB total
+- **Runtime Access**: Disponível via `os.environ`
+
+---
 
 ## Lambda e VPC
 
-Por padrão o Lambda não conseguirá acessar recursos em uma VPC, mas existe uma maneira de fazer com que ele possa. Você deve definir a VPC ID, Subnets e o Grupo de Segurança(Security Group)
+### Por Padrão:
+Lambda executa em VPC gerenciada pela AWS com acesso à internet e serviços AWS.
 
-Funções Lambda e uma VPC não possuem acesso a internet ou a um IP público.
+### VPC Configuration:
+- **Subnet IDs**: Pelo menos 2 subnets
+- **Security Groups**: Controla tráfego de rede
+- **ENI**: Elastic Network Interface criada
 
-- AWSLambdaVOCAccessExecutionRole
+### Limitações em VPC:
+- **Sem Internet**: Por padrão não tem acesso à internet
+- **Cold Start**: Mais lento devido setup de rede
+- **ENI Limits**: Limites de interfaces de rede
 
-<br />
+### Acesso à Internet em VPC:
+- **NAT Gateway**: Em subnet pública
+- **Route Table**: Direcionamento correto
+- **Internet Gateway**: Na VPC
 
-## Simultaneidade e limitações
+### Casos de Uso:
+- **RDS Access**: Banco em VPC privada
+- **ElastiCache**: Cache em VPC
+- **Internal APIs**: Serviços internos da empresa
 
-- Simultaneidade reservada
-- Simultaneidade provisionada
+---
 
-<br />
+## Concorrência e Performance
 
-## Camadas Lambda
+### Concorrência:
+- **Default Limit**: 1000 execuções simultâneas
+- **Reserved Concurrency**: Garantia de capacidade
+- **Provisioned Concurrency**: Pré-aquece funções
 
-As Camadas Lambda(Lambda Layers) podem ter tempos de execução personalizados, bibliotecas, dados ou arquivos de configuração.
+### Reserved Concurrency:
+- **Allocation**: Reserva parte do limite total
+- **Isolation**: Garante que outras funções não consumam
+- **Cost**: Sem custo adicional (apenas reserva)
 
-<br />
+### Provisioned Concurrency:
+- **Pre-warmed**: Instâncias sempre prontas
+- **Zero Cold Start**: Eliminação do cold start
+- **Cost**: Cobrança adicional por instância provisionada
+- **Auto Scaling**: Pode escalar automaticamente
 
-## Imagens de contêiner
+### Cold Start:
+- **Definição**: Tempo para iniciar nova instância
+- **Fatores**: Runtime, package size, VPC config
+- **Otimização**: Reduzir dependencies, connection pooling
+- **Typical Times**: 100ms-10s dependendo do runtime
 
-É possível empacotar o seu código e dependências em uma imagem de contêiner do docker.
+### Performance Optimization:
+- **Memory Allocation**: Mais CPU com mais memória
+- **Connection Reuse**: Pool de conexões DB
+- **Lazy Loading**: Carregar apenas quando necessário
+- **Reduce Package Size**: Apenas dependencies necessárias
 
-Implante funções Lambda em uma imagem de contêiner de até 10GB no ECR.
+---
 
-<br />
+## Lambda Layers
 
-## Lambda versions
+### Conceito:
+Mecanismo para compartilhar código, libraries, custom runtimes entre funções.
 
-Tem o caso de uso para realizar testes (ex: testes A/B) e migrações de suas APIs.
+### Características:
+- **Size Limit**: 250MB (unzipped)
+- **Max Layers**: 5 layers por função
+- **Versioning**: Layers são versionados
+- **Sharing**: Pode ser compartilhado entre contas
 
-Versões ARN:
+### Estrutura:
+```
+layer.zip
+└── python/
+    └── lib/
+        └── python3.8/
+            └── site-packages/
+                └── requests/
+```
 
-- **Qualified:** Quando a versão de uma função lambda for *qualified* terá um sinal `$latest` do ARN. Aqui é possível criar uma nova versão a partir dela
-- **Unqualified:** Se a versão de uma função lambda for *unqualifed* você não conseguirá ver a parte `$latest` no final do ARN. Não é possível fazer mais alterações.
+### Casos de Uso:
+- **Common Libraries**: pandas, requests, boto3
+- **Shared Business Logic**: Código comum entre funções
+- **Custom Runtimes**: Linguagens não suportadas
+- **Configuration**: Arquivos de configuração
 
-### Versões
+### Benefits:
+- **Code Reuse**: Evita duplicação
+- **Smaller Packages**: Função menor, deploy mais rápido
+- **Centralized Updates**: Atualiza library em um lugar
+- **Version Management**: Controle de versões
 
-Enquanto você estiver trabalhando na sua função lambda a versão será `$LATEST` .
+---
 
-Versões são imutáveis, ou seja, isso significa que você não pode alterar mais nada no código ou em variáveis de ambiente.
+## Versões e Aliases
 
-Cada versão terá o seu próprio ARN(*Amazon Resource Name*).
+### Versões ($LATEST):
+- **Mutable**: $LATEST é sempre editável
+- **Immutable**: Versões numeradas são imutáveis
+- **ARN**: Cada versão tem ARN único
+- **Snapshots**: Versão é snapshot do código + config
 
-Versões ARN:
+### Exemplo ARNs:
+```
+# $LATEST (mutable)
+arn:aws:lambda:us-east-1:123456789012:function:MyFunction:$LATEST
 
-- **Qualified:** Quando a versão de uma função lambda for *qualified** terá um sinal `$latest` do ARN. Aqui é possível criar uma nova versão a partir dela
-- **Unqualified:** Se a versão de uma função lambda for *unqualifed** você não conseguirá ver a parte `$latest` no final do ARN. Não é possível fazer mais alterações
+# Version 1 (immutable)
+arn:aws:lambda:us-east-1:123456789012:function:MyFunction:1
+```
 
-### Alias
+### Aliases:
+- **Pointer**: Aponta para versão específica
+- **Mutable**: Pode ser redirecionado
+- **Blue/Green**: Deployment com weighted traffic
+- **Environment**: DEV, STAGING, PROD
 
-São ponteiros que apontam para versões específicadas da sua função lambda. Por exemplo, alias definidos como dev, homol e prod, para utilizarem diferentes versões da função lambda.
+### Traffic Splitting:
+```json
+{
+    "Name": "PROD",
+    "FunctionVersion": "1",
+    "AdditionalVersionWeights": {
+        "2": 0.1
+    }
+}
+```
 
-Alias habilitam implantações do tipo Blue/Green atribuindo pesos de tráfego.
-Aliases também terão os seus próprios ARNs e eles não podem fazer referência a outro alias.
+### Use Cases:
+- **A/B Testing**: Testa duas versões simultaneamente
+- **Canary Deployments**: Gradual rollout
+- **Environment Management**: Separação clara de ambientes
+- **Rollback**: Rápido retorno à versão anterior
 
-<br />
+---
 
-## Limites do Lambda
+## Container Images
 
-- **Execução(*Runtime*)**
-  - Alocação de memória: 128 MB - 10GB (incremento de 1 MB)
-  - Tempo máximo de execução: 900 segundos (15 minutos)
-  - Variáveis de ambiente: 4KB
-  - Armazenamento temporário (/tmp): 512 MB
-  - 1000 execuções simultâneas de uma função (pode ser aumentado abrindo um *ticket* na aws)
-- **Implantação(*Deploy*)**
-  - Tamanho máximo de compressão `.zip` de 50 MB
-  - Tamanho máximo sem compressão de até 250 MB
-  - Variáveis de ambiente: 4KB
+### Conceito:
+Empacote função Lambda como container Docker.
 
-<br />
+### Características:
+- **Image Size**: Até 10GB
+- **Base Images**: AWS fornece base images
+- **ECR**: Deploy via Elastic Container Registry
+- **Local Testing**: Teste local com Docker
 
-## :books: Referências
+### Base Images Oficiais:
+```dockerfile
+FROM public.ecr.aws/lambda/python:3.9
 
-Para uma compreensão mais profunda sobre Lambda recomendo a leitura da documentação oficial, os links estão abaixo.
-E outros links de referência.
+COPY app.py ${LAMBDA_TASK_ROOT}
+COPY requirements.txt ${LAMBDA_TASK_ROOT}
 
-- [O que é o AWS Lambda?](https://docs.aws.amazon.com/pt_br/lambda/latest/dg/welcome.html)
-- [Mapeamentos de origem de eventos do Lambda](https://docs.aws.amazon.com/pt_br/lambda/latest/dg/invocation-eventsourcemapping.html)
-- [Usar camadas com sua função do Lambda](https://docs.aws.amazon.com/pt_br/lambda/latest/dg/invocation-layers.html)    
-- [Usar imagens de contêiner com o Lambda](https://docs.aws.amazon.com/pt_br/lambda/latest/dg/lambda-images.html)
-- :us: [Cloud Jorney](http://www.cyberniti.com/CloudJourney)
+RUN pip install -r requirements.txt
+
+CMD ["app.lambda_handler"]
+```
+
+### Custom Images:
+- **Runtime Interface Client**: Biblioteca necessária
+- **Runtime Interface Emulator**: Para teste local
+- **Multi-stage builds**: Otimização de tamanho
+
+### Vantagens:
+- **Larger Dependencies**: Até 10GB vs 250MB zip
+- **Familiar Tooling**: Docker ecosystem
+- **Local Testing**: Ambiente idêntico
+- **CI/CD Integration**: Pipelines existentes
+
+---
+
+## Monitoramento e Debugging
+
+### CloudWatch Metrics:
+- **Invocations**: Número de execuções
+- **Duration**: Tempo de execução
+- **Errors**: Número de erros
+- **Throttles**: Invocações limitadas
+- **DeadLetterErrors**: Falhas na DLQ
+
+### CloudWatch Logs:
+- **Log Groups**: Criados automaticamente
+- **Log Streams**: Por execução
+- **Structured Logging**: JSON para melhor análise
+- **Log Retention**: Configurável
+
+### X-Ray Tracing:
+- **Distributed Tracing**: Rastreamento end-to-end
+- **Service Map**: Visualização de dependências
+- **Performance Analysis**: Identificação de bottlenecks
+- **Error Analysis**: Root cause analysis
+
+### Environment Variables para X-Ray:
+- `_X_AMZN_TRACE_ID`: Trace ID atual
+- `AWS_XRAY_CONTEXT_MISSING`: Comportamento quando sem context
+- `AWS_XRAY_DAEMON_ADDRESS`: Endereço do daemon
+
+### Lambda Insights:
+- **System Metrics**: CPU, Memory, Network
+- **Application Metrics**: Custom metrics
+- **Enhanced Monitoring**: Visão detalhada performance
+
+---
+
+## Limites e Quotas
+
+### Runtime Limits:
+- **Memory**: 128MB - 10.008MB (incrementos de 1MB)
+- **Timeout**: 15 minutos máximo
+- **Temp Storage (/tmp)**: 512MB - 10.240MB
+- **Environment Variables**: 4KB total
+- **Request/Response**: 6MB payload
+
+### Deployment Limits:
+- **Package Size (zip)**: 50MB compressed, 250MB uncompressed
+- **Container Image**: 10GB
+- **Layers**: 5 layers max, 250MB uncompressed total
+- **Code + Layers**: 250MB uncompressed total
+
+### Concurrency Limits:
+- **Account Limit**: 1000 concurrent executions (default)
+- **Function Limit**: 1000 concurrent executions (max)
+- **Burst Limit**: 3000 initial burst, depois 500/minute increase
+
+### Service Limits:
+- **Function Name**: 64 characters
+- **Description**: 256 characters
+- **Functions per Region**: 1000 (soft limit)
+
+### Network (VPC):
+- **ENIs**: 250 per security group
+- **Hyperplane ENIs**: Newer, more efficient networking
+
+---
+
+## Pricing
+
+### Componentes de Cobrança:
+1. **Requests**: Número de invocações
+2. **Duration**: Tempo de execução (GB-seconds)
+3. **Provisioned Concurrency**: Instâncias pré-aquecidas
+
+### Free Tier:
+- **Requests**: 1 milhão por mês
+- **Duration**: 400.000 GB-seconds por mês
+
+### Pricing Details:
+- **Requests**: $0.20 por 1M requests (após free tier)
+- **Duration**: $0.0000166667 por GB-second
+- **Provisioned Concurrency**: $0.0000041667 por GB-second
+
+### Cálculo Example:
+```
+Function: 512MB, 100ms execution, 1M invocations/month
+Duration: (512MB/1024) * 0.1s * 1M = 50,000 GB-seconds
+Cost: $0.83 per month (dentro free tier)
+```
+
+### Cost Optimization:
+- **Right-size Memory**: Encontrar sweet spot price/performance
+- **Reduce Execution Time**: Código otimizado
+- **Use Layers**: Reduzir size, faster deploys
+- **Reserved Concurrency**: Apenas quando necessário
+
+---
+
+## Perguntas e Respostas
+
+### Q1: Qual a diferença entre invocação síncrona e assíncrona?
+**R:** **Síncrona**: Cliente aguarda resposta, usado por API Gateway/ALB. **Assíncrona**: Fire-and-forget, usado por S3/SNS, inclui retry automático e DLQ. **Event Source Mapping**: Lambda faz polling da fonte (Kinesis/SQS).
+
+### Q2: Como configurar Lambda para acessar RDS em VPC privada?
+**R:** Configure Lambda com Subnet IDs (privadas), Security Group (permitir acesso ao RDS), e IAM role com `AWSLambdaVPCAccessExecutionRole`. Lambda criará ENI para comunicação com VPC.
+
+### Q3: Qual a diferença entre Reserved e Provisioned Concurrency?
+**R:** **Reserved**: Reserva parte do limite de concorrência, sem custo adicional, para garantir capacidade. **Provisioned**: Pré-aquece instâncias, elimina cold start, mas tem custo adicional por instância provisionada.
+
+### Q4: Como funciona o Event Source Mapping?
+**R:** Lambda faz polling da fonte de eventos (Kinesis, DynamoDB Streams, SQS), processa em batches, e escala automaticamente baseado no volume. Usado para fontes que não fazem push de eventos.
+
+### Q5: Quais são os tipos de ARN para versões Lambda?
+**R:** **Qualified ARN**: Inclui versão específica (`:1`, `:$LATEST`). **Unqualified ARN**: Sem versão, sempre aponta para $LATEST. Aliases têm ARNs próprios e podem fazer traffic splitting.
+
+### Q6: Como implementar Blue/Green deployment com Lambda?
+**R:** Use Aliases com weighted traffic routing. Exemplo: Alias PROD aponta 90% para versão 1 e 10% para versão 2, permitindo canary deployment e rollback rápido.
+
+### Q7: Quais são os limites principais do Lambda?
+**R:** **Runtime**: 15min timeout, 10GB memory, 10GB temp storage. **Package**: 50MB zip, 250MB uncompressed, 10GB container. **Concurrency**: 1000 simultâneas default. **Payload**: 6MB max.
+
+### Q8: Como otimizar cold start no Lambda?
+**R:** Use Provisioned Concurrency, reduza package size, evite VPC se possível, use connection pooling, lazy loading, e considere runtime mais rápido (Go, Java compiled).
+
+### Q9: Qual a diferença entre Execution Role e Resource-based Policy?
+**R:** **Execution Role**: O que Lambda pode acessar (outbound). **Resource-based Policy**: Quem pode invocar Lambda (inbound). Ambas são necessárias para integração completa.
+
+### Q10: Como configurar DLQ (Dead Letter Queue) no Lambda?
+**R:** Configure SQS ou SNS como DLQ na configuração da função (apenas para invocações assíncronas). Para Event Source Mapping, configure DLQ no próprio mapping.
+
+### Q11: O que são Lambda Layers e quando usar?
+**R:** Compartilham código/libraries entre funções. Use para: common libraries, shared business logic, custom runtimes. Limite: 5 layers, 250MB total, versionadas.
+
+### Q12: Como funciona o pricing do Lambda?
+**R:** Cobrança por requests ($0.20/1M após free tier) + duration (GB-seconds). Free tier: 1M requests + 400K GB-seconds/mês. Provisioned Concurrency tem custo adicional.
+
+### Q13: Diferença entre Container Images e ZIP deployment?
+**R:** **ZIP**: 250MB limit, mais rápido cold start, tradicional. **Container**: 10GB limit, teste local idêntico, familiar para Docker users, suporte a dependencies maiores.
+
+### Q14: Como configurar environment variables e encryption?
+**R:** Configure via console/CLI, limite 4KB total. Para dados sensíveis use KMS encryption. Variables ficam disponíveis via `os.environ` no runtime.
+
+### Q15: Quais integrações requerem Resource-based Policy?
+**R:** S3, API Gateway, ALB, SNS, EventBridge. Services como Kinesis, DynamoDB Streams, SQS usam Execution Role pois Lambda faz polling.
+
+### Q16: Como monitorar e debuggar Lambda functions?
+**R:** **CloudWatch**: Metrics automáticos + logs. **X-Ray**: Distributed tracing. **Lambda Insights**: System metrics detalhados. Use structured logging (JSON) para melhor análise.
+
+### Q17: Qual configuração de memory escolher?
+**R:** Memory aloca proporcionalmente CPU. Teste diferentes valores para encontrar sweet spot entre performance e custo. Mais memory = mais CPU = execução mais rápida (pode compensar custo).
+
+### Q18: Como implementar error handling robusto?
+**R:** **Síncronas**: Try/catch + status codes apropriados. **Assíncronas**: Configure retry + DLQ. **Event Source Mapping**: Configure bisect on error + DLQ + maximum record age.
+
+### Q19: Diferença entre S3 Event Notifications e EventBridge?
+**R:** **S3 Events**: Direto S3→Lambda, mais rápido, formato específico. **EventBridge**: S3→EventBridge→Lambda, permite filtering/routing complexo, formato padrão, mais flexível.
+
+### Q20: Como configurar Lambda com ALB?
+**R:** Crie Target Group tipo "Lambda function", adicione função, configure health checks (opcional para Lambda). Lambda recebe formato específico ALB e deve retornar statusCode + body.
+
+---
+
+## Referências
+
+- [AWS Lambda Developer Guide](https://docs.aws.amazon.com/lambda/latest/dg/)
+- [AWS Lambda Best Practices](https://docs.aws.amazon.com/lambda/latest/dg/best-practices.html)
+- [Lambda Event Source Mappings](https://docs.aws.amazon.com/lambda/latest/dg/invocation-eventsourcemapping.html)
+- [Lambda Layers](https://docs.aws.amazon.com/lambda/latest/dg/configuration-layers.html)
+- [Lambda Container Images](https://docs.aws.amazon.com/lambda/latest/dg/lambda-images.html)
+- [Lambda Security](https://docs.aws.amazon.com/lambda/latest/dg/lambda-security.html)
+- [Lambda Monitoring](https://docs.aws.amazon.com/lambda/latest/dg/lambda-monitoring.html)
+- [Serverless Application Lens](https://docs.aws.amazon.com/wellarchitected/latest/serverless-applications-lens/)
+
+---
+
+## 💡 Dicas para o Exame
+
+1. **Memorize os limites**: 15min timeout, 10GB memory, 1000 concurrency default
+2. **Entenda modelos de invocação**: Síncrona vs Assíncrona vs Event Source Mapping  
+3. **Saiba quando usar cada integração**: API Gateway, ALB, S3, SQS, Kinesis
+4. **Compreenda IAM**: Execution Role vs Resource-based Policy
+5. **Entenda Versioning**: $LATEST, numbered versions, aliases, traffic splitting
+6. **Saiba sobre VPC**: ENI creation, internet access, performance impact
+7. **Compreenda concurrency**: Reserved vs Provisioned, cold start mitigation
+8. **Conheça Lambda Layers**: Sharing code, size limits, versioning
+9. **Entenda error handling**: DLQ, retry logic, diferentes por invocation type
+10. **Pratique troubleshooting**: CloudWatch logs, X-Ray tracing, common errors
+11. **Saiba pricing model**: Requests + GB-seconds, free tier limits
+12. **Entenda container support**: 10GB limit, ECR integration, local testing
+13. **Conheça event formats**: Diferentes para cada source (S3, API Gateway, ALB)
+14. **Pratique deployment**: ZIP vs Container, CI/CD patterns
+15. **Entenda performance**: Memory sizing, connection pooling, optimization techniques
