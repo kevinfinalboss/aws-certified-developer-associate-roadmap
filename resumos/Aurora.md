@@ -1,7 +1,7 @@
 # Amazon Aurora
 
 <p align="center">
-  <img src="./img/aws-icons/aws-Aurora.png" alt="aws-aurora-icon" style="height:150px; width:150px;" />
+  <img src="https://dbdb.io/media/logos/amazon-aurora_IGQMXko.png" alt="amazon-aurora-logo" style="height:150px; width:150px;" />
   <br />
   <h1 align="center">
     Amazon Aurora
@@ -21,6 +21,7 @@
 - [Custo e Free Tier](#custo-e-free-tier)
 - [Principais Diferenças Aurora x RDS](#principais-diferenças-aurora-x-rds)
 - [Considerações para Prova](#considerações-para-prova)
+- [Questões Frequentes de Prova](#questões-frequentes-de-prova)
 - [📚 Referências](#-referências)
 
 ---
@@ -125,8 +126,49 @@ Aurora utiliza um sistema de **endpoints distintos** para facilitar a conexão e
 
 ---
 
+## Questões Frequentes de Prova
+
+### Questão 1  
+**Qual a diferença principal entre os endpoints do Amazon Aurora?**  
+✅ *Resposta:*  
+- O **endpoint de cluster** aponta para a instância principal para escrita.  
+- O **endpoint de leitura** distribui as consultas entre as réplicas de leitura.  
+- Os **endpoints de instância** conectam diretamente a instâncias específicas.
+
+---
+
+### Questão 2  
+**Quantas réplicas de leitura Aurora suporta em comparação ao MySQL no RDS?**  
+✅ *Resposta:* Aurora suporta até **15 réplicas de leitura**, enquanto MySQL no RDS suporta até 5.
+
+---
+
+### Questão 3  
+**Como o Amazon Aurora garante alta disponibilidade dos dados?**  
+✅ *Resposta:* Armazena **6 cópias dos dados distribuídas em 3 zonas de disponibilidade**, com replicação quase síncrona e failover automático.
+
+---
+
+### Questão 4  
+**Qual a vantagem do failover no Aurora em comparação ao RDS padrão?**  
+✅ *Resposta:* O failover no Aurora é **quase instantâneo e automático**, enquanto no RDS tradicional pode ser mais lento e requer intervenção.
+
+---
+
+### Questão 5  
+**O que acontece quando o armazenamento do cluster Aurora chega ao limite atual?**  
+✅ *Resposta:* O armazenamento **auto escala automaticamente** até o limite máximo de 128 TiB, sem downtime.
+
+---
+
+### Questão 6  
+**Aurora possui camada gratuita (free tier)?**  
+✅ *Resposta:* **Não**, Aurora não possui free tier, diferente do RDS.
+
+---
+
 ## 📚 Referências
 
-- [Amazon Aurora – Documentação Oficial AWS](https://docs.aws.amazon.com/pt_br/AmazonRDS/latest/AuroraUserGuide/CHAP_AuroraOverview.html)
-- [Aurora Endpoints](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/Aurora.Overview.Endpoints.html)
+- [Amazon Aurora – Documentação Oficial AWS](https://docs.aws.amazon.com/pt_br/AmazonRDS/latest/AuroraUserGuide/CHAP_AuroraOverview.html)  
+- [Aurora Endpoints](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/Aurora.Overview.Endpoints.html)  
 - [Comparação Aurora e RDS](https://aws.amazon.com/rds/aurora/faqs/)
