@@ -266,5 +266,3 @@ Métricas detalhadas ajudam organizações a medir ROI e otimizar a adoção da 
 - [CodeWhisperer Pricing](https://aws.amazon.com/codewhisperer/pricing/)
 
 ---
-
-Feito com ♥ by Claude AI :wave:
