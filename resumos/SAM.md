@@ -9,19 +9,18 @@
 
 ## :pushpin: Índice
 - [Introdução](#introdução)
-- [Conceitos Fundamentais](#conceitos-fundamentais)
-- [Instalação e Configuração](#instalação-e-configuração)
-- [Estrutura do Template SAM](#estrutura-do-template-sam)
-- [Recursos Principais](#recursos-principais)
-- [Comandos Essenciais](#comandos-essenciais)
+- [Transform Declaration](#transform-declaration)
+- [Recursos SAM](#recursos-sam)
+  - [AWS::Serverless::Function](#awsserverlessfunction)
+  - [AWS::Serverless::Api](#awsserverlessapi)
+  - [AWS::Serverless::SimpleTable](#awsserverlesssimpletable)
+- [Comandos SAM CLI](#comandos-sam-cli)
 - [Desenvolvimento Local](#desenvolvimento-local)
-- [Testando Localmente](#testando-localmente)
-- [Pipeline de Deployment](#pipeline-de-deployment)
-- [Políticas e Permissões](#políticas-e-permissões)
-- [Monitoramento e Debug](#monitoramento-e-debug)
+- [Template SAM vs CloudFormation](#template-sam-vs-cloudformation)
+- [Deployment](#deployment)
+- [Políticas SAM](#políticas-sam)
 - [SAR - Serverless Application Repository](#sar---serverless-application-repository)
-- [Melhores Práticas](#melhores-práticas)
-- [Exemplos Práticos](#exemplos-práticos)
+- [Conceitos de Prova](#conceitos-de-prova)
 - [Quiz](#quiz)
 - [Referências](#books-referências)
 
@@ -29,129 +28,86 @@
 
 ## Introdução
 
-Amazon SAM (Serverless Application Model) é um framework open-source da AWS para desenvolvimento e deployment de aplicações serverless. SAM estende o AWS CloudFormation com uma sintaxe simplificada especificamente otimizada para funções Lambda, APIs, bancos de dados e mapeamentos de origem de eventos.
+AWS SAM (Serverless Application Model) é um framework open-source que **estende o CloudFormation** para simplificar o desenvolvimento de aplicações serverless. SAM usa uma **sintaxe declarativa** para definir funções Lambda, APIs, tabelas DynamoDB e mapeamentos de eventos.
 
-**Características principais:**
-- Sintaxe simplificada baseada em YAML/JSON
-- Transformação automática para CloudFormation
-- Desenvolvimento e teste local
-- Deployment automatizado
-- Integração nativa com serviços AWS
-
-<br />
-
-## Conceitos Fundamentais
-
-### Transform Declaration
-```yaml
-Transform: AWS::Serverless-2016-10-31
-```
-Esta declaração indica ao CloudFormation que o template utiliza a especificação SAM e deve ser transformado antes do deployment.
-
-### Recursos SAM vs CloudFormation
-SAM oferece recursos simplificados que são expandidos para múltiplos recursos CloudFormation:
-- `AWS::Serverless::Function` → Lambda Function + IAM Role + Event Sources
-- `AWS::Serverless::Api` → API Gateway + Deployment + Stage
-- `AWS::Serverless::SimpleTable` → DynamoDB Table
+**Pontos chave para a prova:**
+- SAM é construído sobre CloudFormation
+- Usa transform `AWS::Serverless-2016-10-31`
+- Simplifica deployment de aplicações serverless
+- Suporta desenvolvimento e teste local
 
 <br />
 
-## Instalação e Configuração
+## Transform Declaration
 
-### Pré-requisitos
-- AWS CLI configurado
-- Docker (para desenvolvimento local)
-- Python 3.7+ ou runtime desejado
+**CONCEITO FUNDAMENTAL:** Todo template SAM deve incluir a declaração Transform.
 
-### Instalação SAM CLI
-```bash
-pip install aws-sam-cli
-sam --version
-```
-
-### Inicialização de projeto
-```bash
-sam init
-sam init --runtime python3.9 --name my-sam-app
-sam init --app-template hello-world --runtime nodejs14.x
-```
-
-<br />
-
-## Estrutura do Template SAM
-
-### Template Básico
 ```yaml
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: 'Aplicação SAM exemplo'
-
-Globals:
-  Function:
-    Timeout: 30
-    MemorySize: 512
-    Runtime: python3.9
-
-Parameters:
-  Environment:
-    Type: String
-    Default: dev
-    AllowedValues: [dev, staging, prod]
-
-Resources:
-  MyFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: src/
-      Handler: app.lambda_handler
-      Environment:
-        Variables:
-          ENV: !Ref Environment
-
-Outputs:
-  MyFunctionArn:
-    Description: "ARN da função Lambda"
-    Value: !GetAtt MyFunction.Arn
-    Export:
-      Name: !Sub "${AWS::StackName}-MyFunctionArn"
 ```
+
+**O que acontece:**
+1. CloudFormation identifica que é um template SAM
+2. Transforma recursos SAM em recursos CloudFormation nativos
+3. Aplica configurações automáticas (IAM roles, etc.)
+
+**Na prova:** Questões sobre templates que não funcionam geralmente faltam esta linha.
 
 <br />
 
-## Recursos Principais
+## Recursos SAM
 
 ### AWS::Serverless::Function
+
+**Cria automaticamente:**
+- Função Lambda
+- IAM Role de execução
+- CloudWatch Logs group
+- Event source mappings
+
 ```yaml
 MyFunction:
   Type: AWS::Serverless::Function
   Properties:
     CodeUri: src/
-    Handler: index.handler
-    Runtime: nodejs14.x
+    Handler: app.lambda_handler
+    Runtime: python3.9
     Timeout: 30
-    MemorySize: 256
-    ReservedConcurrencyLimit: 100
+    MemorySize: 128
     Environment:
       Variables:
         TABLE_NAME: !Ref MyTable
     Events:
-      Api:
+      ApiEvent:
         Type: Api
         Properties:
-          Path: /users
+          Path: /hello
           Method: get
-      Schedule:
-        Type: Schedule
+      S3Event:
+        Type: S3
         Properties:
-          Schedule: rate(5 minutes)
-    Layers:
-      - !Ref MyLayer
-    DeadLetterQueue:
-      Type: SQS
-      TargetArn: !GetAtt MyDeadLetterQueue.Arn
+          Bucket: !Ref MyBucket
+          Events: s3:ObjectCreated:*
 ```
 
+**Tipos de Events importantes para prova:**
+- **Api**: Cria API Gateway REST API
+- **HttpApi**: Cria API Gateway HTTP API (mais barato, HTTP/2)
+- **S3**: Trigger em eventos S3
+- **DynamoDB**: DynamoDB Streams
+- **Kinesis**: Kinesis Streams
+- **SQS**: SQS Queue
+- **SNS**: SNS Topic
+- **Schedule**: CloudWatch Events (cron/rate)
+
 ### AWS::Serverless::Api
+
+**Cria automaticamente:**
+- API Gateway REST API
+- Deployment
+- Stage
+
 ```yaml
 MyApi:
   Type: AWS::Serverless::Api
@@ -162,18 +118,23 @@ MyApi:
       Authorizers:
         MyCognitoAuth:
           UserPoolArn: !GetAtt MyCognitoUserPool.Arn
-    GatewayResponses:
-      DEFAULT_4XX:
-        ResponseParameters:
-          Headers:
-            Access-Control-Allow-Origin: "'*'"
     Cors:
-      AllowMethods: "'*'"
-      AllowHeaders: "'*'"
+      AllowMethods: "'GET,POST,PUT'"
+      AllowHeaders: "'Content-Type,Authorization'"
       AllowOrigin: "'*'"
 ```
 
+**Conceitos importantes:**
+- **Auth**: Configuração de autorizadores
+- **Cors**: Cross-Origin Resource Sharing
+- **Stage**: Ambiente de deployment (dev, prod)
+
 ### AWS::Serverless::SimpleTable
+
+**Cria automaticamente:**
+- Tabela DynamoDB
+- Com chave primária simples
+
 ```yaml
 MyTable:
   Type: AWS::Serverless::SimpleTable
@@ -184,173 +145,141 @@ MyTable:
     ProvisionedThroughput:
       ReadCapacityUnits: 5
       WriteCapacityUnits: 5
-    SSESpecification:
-      SSEEnabled: true
-    StreamSpecification:
-      StreamViewType: NEW_AND_OLD_IMAGES
 ```
 
-### AWS::Serverless::LayerVersion
-```yaml
-MyLayer:
-  Type: AWS::Serverless::LayerVersion
-  Properties:
-    LayerName: my-dependencies
-    Description: Dependências compartilhadas
-    ContentUri: dependencies/
-    CompatibleRuntimes:
-      - python3.9
-      - python3.8
-    RetentionPolicy: Delete
-```
+**Limitações do SimpleTable:**
+- Apenas uma chave primária
+- Não suporta GSI/LSI
+- Para tabelas complexas, usar `AWS::DynamoDB::Table`
 
 <br />
 
-## Comandos Essenciais
+## Comandos SAM CLI
 
-### Build e Package
+**Comandos essenciais para a prova:**
+
 ```bash
+sam init
 sam build
-sam build --use-container
-sam build --build-dir custom-build-dir
-sam package --s3-bucket my-bucket --output-template-file packaged.yaml
-```
-
-### Deploy
-```bash
+sam local start-api
+sam local invoke
 sam deploy --guided
-sam deploy --stack-name my-stack --s3-bucket my-bucket --capabilities CAPABILITY_IAM
-sam deploy --parameter-overrides Environment=prod
-```
-
-### Validação
-```bash
+sam logs
 sam validate
-sam validate --template template.yaml
 ```
 
-### Logs
-```bash
-sam logs -n MyFunction --stack-name my-stack --tail
-sam logs -n MyFunction --start-time '10min ago' --end-time '2min ago'
-```
+**Fluxo típico:**
+1. `sam init` - Inicializa projeto
+2. `sam build` - Compila aplicação
+3. `sam local start-api` - Testa localmente
+4. `sam deploy --guided` - Deploy inicial com prompts
+5. `sam deploy` - Deploy subsequentes
 
 <br />
 
 ## Desenvolvimento Local
 
-### Executando API localmente
+**SAM Local simula:**
+- Lambda execution environment
+- API Gateway
+- DynamoDB Local (com --docker-network)
+
 ```bash
-sam local start-api
 sam local start-api --port 8080
-sam local start-api --env-vars env.json
-```
-
-### Executando Lambda localmente
-```bash
-sam local invoke MyFunction
 sam local invoke MyFunction --event events/event.json
-sam local invoke MyFunction --env-vars env.json
-```
-
-### Gerando eventos de teste
-```bash
 sam local generate-event apigateway aws-proxy > event.json
-sam local generate-event s3 put > s3-event.json
-sam local generate-event dynamodb update > dynamodb-event.json
 ```
+
+**Conceito importante:** SAM Local usa **Docker** para simular o ambiente Lambda.
 
 <br />
 
-## Testando Localmente
+## Template SAM vs CloudFormation
 
-### Estrutura de testes
+**Template SAM:**
 ```yaml
-MyFunction:
-  Type: AWS::Serverless::Function
-  Properties:
-    CodeUri: src/
-    Handler: app.lambda_handler
-    Events:
-      TestEvent:
-        Type: Api
-        Properties:
-          Path: /test
-          Method: post
-```
-
-### Arquivo de eventos personalizados
-```json
-{
-  "httpMethod": "POST",
-  "body": "{\"message\": \"hello world\"}",
-  "headers": {
-    "Content-Type": "application/json"
-  },
-  "pathParameters": {
-    "id": "123"
-  },
-  "queryStringParameters": {
-    "filter": "active"
-  }
-}
-```
-
-### Variáveis de ambiente para testes
-```json
-{
-  "MyFunction": {
-    "TABLE_NAME": "local-table",
-    "DEBUG": "true",
-    "AWS_DEFAULT_REGION": "us-east-1"
-  }
-}
-```
-
-<br />
-
-## Pipeline de Deployment
-
-### Template com múltiplos estágios
-```yaml
-Parameters:
-  Stage:
-    Type: String
-    Default: dev
-
-Mappings:
-  StageMap:
-    dev:
-      MemorySize: 128
-      Timeout: 30
-    prod:
-      MemorySize: 512
-      Timeout: 60
-
+Transform: AWS::Serverless-2016-10-31
 Resources:
   MyFunction:
     Type: AWS::Serverless::Function
     Properties:
-      MemorySize: !FindInMap [StageMap, !Ref Stage, MemorySize]
-      Timeout: !FindInMap [StageMap, !Ref Stage, Timeout]
+      CodeUri: src/
+      Handler: app.handler
+      Runtime: nodejs14.x
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /hello
+            Method: get
 ```
 
-### Script de deployment automatizado
-```bash
-#!/bin/bash
-STACK_NAME="my-app-${STAGE}"
-S3_BUCKET="my-deployment-bucket-${STAGE}"
+**Equivalente CloudFormation (expandido):**
+```yaml
+Resources:
+  MyFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket: !Ref Bucket
+        S3Key: !Ref Key
+      Handler: app.handler
+      Runtime: nodejs14.x
+      Role: !GetAtt MyFunctionRole.Arn
+  
+  MyFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument: ...
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+  
+  MyApi:
+    Type: AWS::ApiGateway::RestApi
+  
+  MyApiDeployment:
+    Type: AWS::ApiGateway::Deployment
+  
+  MyApiStage:
+    Type: AWS::ApiGateway::Stage
+```
 
-sam build
-sam package --s3-bucket $S3_BUCKET --output-template-file packaged.yaml
-sam deploy --template-file packaged.yaml --stack-name $STACK_NAME --parameter-overrides Stage=$STAGE --capabilities CAPABILITY_IAM
+**Na prova:** SAM reduz dramaticamente a complexidade do template.
+
+<br />
+
+## Deployment
+
+**Processo de deployment SAM:**
+
+1. **Build**: `sam build`
+   - Compila código
+   - Resolve dependências
+   - Cria .aws-sam/build/
+
+2. **Package**: `sam package` ou `sam deploy`
+   - Upload código para S3
+   - Atualiza template com S3 URLs
+
+3. **Deploy**: CloudFormation stack deployment
+
+**Configuração samconfig.toml:**
+```toml
+version = 0.1
+[default.deploy.parameters]
+stack_name = "my-sam-app"
+s3_bucket = "my-deployment-bucket"
+region = "us-east-1"
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = "Environment=dev"
 ```
 
 <br />
 
-## Políticas e Permissões
+## Políticas SAM
 
-### Políticas SAM pré-definidas
+**Políticas pré-definidas (Policy Templates):**
+
 ```yaml
 MyFunction:
   Type: AWS::Serverless::Function
@@ -365,305 +294,270 @@ MyFunction:
       - CloudWatchPutMetricPolicy: {}
 ```
 
-### Políticas customizadas
-```yaml
-MyFunction:
-  Type: AWS::Serverless::Function
-  Properties:
-    Policies:
-      - Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Action:
-              - secretsmanager:GetSecretValue
-            Resource: !Ref MySecret
-```
+**Principais Policy Templates:**
+- **DynamoDBCrudPolicy**: Read/Write DynamoDB
+- **DynamoDBReadPolicy**: Read-only DynamoDB
+- **S3ReadPolicy**: Read S3 objects
+- **S3CrudPolicy**: Full S3 access
+- **SQSSendMessagePolicy**: Send SQS messages
+- **SNSPublishMessagePolicy**: Publish SNS messages
+- **CloudWatchPutMetricPolicy**: Put CloudWatch metrics
 
-<br />
-
-## Monitoramento e Debug
-
-### CloudWatch Insights
-```yaml
-MyFunction:
-  Type: AWS::Serverless::Function
-  Properties:
-    Tracing: Active
-    Environment:
-      Variables:
-        _X_AMZN_TRACE_ID: !Ref AWS::NoValue
-```
-
-### Configuração de alarmes
-```yaml
-HighErrorRateAlarm:
-  Type: AWS::CloudWatch::Alarm
-  Properties:
-    AlarmDescription: "Alta taxa de erros na função"
-    MetricName: Errors
-    Namespace: AWS/Lambda
-    Statistic: Sum
-    Period: 300
-    EvaluationPeriods: 2
-    Threshold: 5
-    ComparisonOperator: GreaterThanThreshold
-    Dimensions:
-      - Name: FunctionName
-        Value: !Ref MyFunction
-```
+**Na prova:** Policy Templates são preferíveis a políticas IAM customizadas.
 
 <br />
 
 ## SAR - Serverless Application Repository
 
-### Publicando aplicação no SAR
+**Conceitos importantes:**
+- Repositório público de aplicações serverless
+- Permite compartilhar e reutilizar aplicações SAM
+- Aplicações podem ser deployed diretamente do SAR
+
+**Metadata para publicação:**
 ```yaml
 Metadata:
   AWS::ServerlessRepo::Application:
     Name: my-serverless-app
-    Description: "Aplicação serverless de exemplo"
-    Author: "Seu Nome"
+    Description: "Aplicação exemplo"
+    Author: "Nome do Autor"
     SpdxLicenseId: MIT
-    LicenseUrl: LICENSE.txt
-    ReadmeUrl: README.md
-    Labels: ['serverless', 'lambda', 'api']
-    HomePageUrl: https://github.com/user/repo
+    Labels: ['serverless', 'lambda']
     SemanticVersion: 1.0.0
-    SourceCodeUrl: https://github.com/user/repo
 ```
 
-### Deployment via SAR
+**Deploy do SAR:**
 ```bash
-sam publish --template packaged.yaml --region us-east-1
-sam deploy --guided --template-file https://serverlessrepo.aws.amazon.com/applications/...
+sam deploy --guided --template-file <SAR-APP-URL>
 ```
 
 <br />
 
-## Melhores Práticas
+## Conceitos de Prova
 
-### Organização de código
-```
-my-sam-app/
-├── template.yaml
-├── samconfig.toml
-├── src/
-│   ├── functions/
-│   │   ├── user/
-│   │   │   ├── app.py
-│   │   │   └── requirements.txt
-│   │   └── order/
-│   │       ├── app.py
-│   │       └── requirements.txt
-│   └── layers/
-│       └── common/
-│           └── python/
-│               └── lib/
-├── events/
-│   ├── user-event.json
-│   └── order-event.json
-└── tests/
-    ├── unit/
-    └── integration/
-```
+### 1. Quando usar SAM vs CloudFormation direto
+**Use SAM quando:**
+- Aplicações serverless (Lambda, API Gateway, DynamoDB)
+- Desenvolvimento local necessário
+- Templates simples e legíveis
 
-### Configuração por ambiente
-```toml
-# samconfig.toml
-version = 0.1
+**Use CloudFormation quando:**
+- Recursos não-serverless complexos
+- Controle granular sobre configurações
+- Integrações avançadas
 
-[default.deploy.parameters]
-stack_name = "my-app-dev"
-s3_bucket = "my-deployment-bucket-dev"
-region = "us-east-1"
-capabilities = "CAPABILITY_IAM"
-
-[prod.deploy.parameters]
-stack_name = "my-app-prod"
-s3_bucket = "my-deployment-bucket-prod"
-parameter_overrides = "Environment=prod"
-```
-
-<br />
-
-## Exemplos Práticos
-
-### API REST completa
+### 2. Globals Section
 ```yaml
-AWSTemplateFormatVersion: '2010-09-09'
-Transform: AWS::Serverless-2016-10-31
-
 Globals:
   Function:
     Runtime: python3.9
     Timeout: 30
+    MemorySize: 256
     Environment:
       Variables:
-        TABLE_NAME: !Ref UsersTable
-
-Resources:
-  UsersApi:
-    Type: AWS::Serverless::Api
-    Properties:
-      StageName: prod
-      Cors:
-        AllowMethods: "'*'"
-        AllowHeaders: "'*'"
-        AllowOrigin: "'*'"
-
-  CreateUserFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: src/create_user/
-      Handler: app.lambda_handler
-      Events:
-        CreateUser:
-          Type: Api
-          Properties:
-            RestApiId: !Ref UsersApi
-            Path: /users
-            Method: post
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref UsersTable
-
-  GetUserFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: src/get_user/
-      Handler: app.lambda_handler
-      Events:
-        GetUser:
-          Type: Api
-          Properties:
-            RestApiId: !Ref UsersApi
-            Path: /users/{id}
-            Method: get
-      Policies:
-        - DynamoDBReadPolicy:
-            TableName: !Ref UsersTable
-
-  UsersTable:
-    Type: AWS::Serverless::SimpleTable
-    Properties:
-      PrimaryKey:
-        Name: id
-        Type: String
+        LOG_LEVEL: INFO
+  Api:
+    Cors:
+      AllowOrigin: "'*'"
 ```
 
-### Processamento de eventos S3
-```yaml
-ProcessS3Function:
-  Type: AWS::Serverless::Function
-  Properties:
-    CodeUri: src/process_s3/
-    Handler: app.lambda_handler
-    Events:
-      S3Event:
-        Type: S3
-        Properties:
-          Bucket: !Ref ProcessingBucket
-          Events: s3:ObjectCreated:*
-          Filter:
-            S3Key:
-              Rules:
-                - Name: prefix
-                  Value: uploads/
-                - Name: suffix
-                  Value: .json
-    Policies:
-      - S3ReadPolicy:
-          BucketName: !Ref ProcessingBucket
+**Conceito:** Globals aplica configurações para todos os recursos do mesmo tipo.
 
-ProcessingBucket:
-  Type: AWS::S3::Bucket
-  Properties:
-    NotificationConfiguration:
-      LambdaConfigurations:
-        - Event: s3:ObjectCreated:*
-          Function: !GetAtt ProcessS3Function.Arn
+### 3. Intrinsic Functions
+SAM suporta todas as funções intrínsecas do CloudFormation:
+- `!Ref`, `!GetAtt`, `!Sub`, `!Join`
+- `!FindInMap`, `!Select`, `!Split`
+
+### 4. Parameters e Outputs
+```yaml
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, staging, prod]
+
+Outputs:
+  ApiUrl:
+    Description: "URL da API"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
+    Export:
+      Name: !Sub "${AWS::StackName}-ApiUrl"
+```
+
+### 5. Conditional Resources
+```yaml
+Conditions:
+  IsProd: !Equals [!Ref Environment, prod]
+
+Resources:
+  ProductionOnlyResource:
+    Type: AWS::S3::Bucket
+    Condition: IsProd
 ```
 
 <br />
 
 ## Quiz
 
-### 1. O que significa o Transform header em um template SAM?
-**Resposta:** `Transform: AWS::Serverless-2016-10-31`
+### 1. Qual declaração é obrigatória em todo template SAM?
+**a)** `AWSTemplateFormatVersion: '2010-09-09'`  
+**b)** `Transform: AWS::Serverless-2016-10-31`  
+**c)** `Description: Template SAM`  
+**d)** `Parameters: {}`
 
-**Explicação:** O Transform header indica ao AWS CloudFormation que este é um template SAM que precisa ser transformado de recursos SAM simplificados para recursos CloudFormation completos antes do deployment. Esta declaração é obrigatória em todos os templates SAM.
+**Resposta:** b) `Transform: AWS::Serverless-2016-10-31`
 
-### 2. Qual comando é usado para testar uma função Lambda localmente?
-**Resposta:** `sam local invoke`
+**Explicação:** A declaração Transform é obrigatória e informa ao CloudFormation que o template usa a especificação SAM e deve ser transformado antes do deployment.
 
-**Explicação:** O comando `sam local invoke` permite executar uma função Lambda específica localmente usando Docker, simulando o ambiente de execução da AWS. Pode ser usado com eventos personalizados através do parâmetro `--event`.
+### 2. Qual comando executa uma função Lambda localmente?
+**a)** `sam local start-lambda`  
+**b)** `sam local invoke`  
+**c)** `sam local run`  
+**d)** `sam local execute`
 
-### 3. Qual recurso SAM é usado para criar uma tabela DynamoDB simples?
-**Resposta:** `AWS::Serverless::SimpleTable`
+**Resposta:** b) `sam local invoke`
 
-**Explicação:** AWS::Serverless::SimpleTable é um recurso SAM que cria uma tabela DynamoDB com configurações básicas. Para tabelas mais complexas com múltiplos índices e configurações avançadas, deve-se usar AWS::DynamoDB::Table.
+**Explicação:** `sam local invoke` executa uma função Lambda específica localmente usando Docker, permitindo testes sem deployment.
 
-### 4. Como você especifica variáveis de ambiente em uma função SAM?
-**Resposta:** 
-```yaml
-Environment:
-  Variables:
-    VARIABLE_NAME: value
-```
+### 3. Qual recurso SAM cria uma tabela DynamoDB simples?
+**a)** `AWS::Serverless::Database`  
+**b)** `AWS::Serverless::Table`  
+**c)** `AWS::Serverless::SimpleTable`  
+**d)** `AWS::Serverless::DynamoDB`
 
-**Explicação:** As variáveis de ambiente são definidas na seção Environment.Variables da função. Elas ficam disponíveis no runtime da função Lambda e podem referenciar outros recursos usando funções intrínsecas como !Ref.
+**Resposta:** c) `AWS::Serverless::SimpleTable`
 
-### 5. Qual é a diferença entre sam build e sam package?
-**Resposta:** 
-- `sam build`: Compila a aplicação localmente e converte template SAM para CloudFormation
-- `sam package`: Empacota o código em ZIP e faz upload para S3, gerando template com referências S3
+**Explicação:** AWS::Serverless::SimpleTable cria uma tabela DynamoDB com configurações básicas e apenas chave primária simples.
 
-**Explicação:** sam build prepara a aplicação para deployment criando artefatos locais, enquanto sam package carrega esses artefatos para S3 e atualiza o template com as URLs S3, necessário para deployment.
+### 4. Qual tipo de evento configura um trigger S3 para uma função Lambda?
+**a)** `S3Trigger`  
+**b)** `S3`  
+**c)** `S3Event`  
+**d)** `BucketEvent`
 
-### 6. O que são as políticas SAM pré-definidas?
-**Resposta:** Políticas IAM simplificadas fornecidas pelo SAM para permissões comuns
+**Resposta:** b) `S3`
 
-**Explicação:** SAM oferece políticas como DynamoDBCrudPolicy, S3ReadPolicy, SQSSendMessagePolicy que são expandidas automaticamente para permissões IAM completas, simplificando a configuração de segurança.
+**Explicação:** O tipo de evento `S3` configura um trigger S3 que invoca a função Lambda quando eventos especificados ocorrem no bucket.
 
-### 7. Como você configura CORS em uma API SAM?
-**Resposta:**
-```yaml
-Cors:
-  AllowMethods: "'*'"
-  AllowHeaders: "'*'"
-  AllowOrigin: "'*'"
-```
+### 5. Qual policy template permite operações CRUD no DynamoDB?
+**a)** `DynamoDBFullAccess`  
+**b)** `DynamoDBCrudPolicy`  
+**c)** `DynamoDBReadWritePolicy`  
+**d)** `TableCrudPolicy`
 
-**Explicação:** CORS é configurado no recurso AWS::Serverless::Api ou globalmente. Os valores devem estar entre aspas simples dentro de aspas duplas devido à sintaxe YAML/CloudFormation.
+**Resposta:** b) `DynamoDBCrudPolicy`
 
-### 8. Qual comando inicia uma API Gateway local para desenvolvimento?
-**Resposta:** `sam local start-api`
+**Explicação:** DynamoDBCrudPolicy é um policy template SAM que concede permissões de Create, Read, Update e Delete para uma tabela DynamoDB específica.
 
-**Explicação:** Este comando inicia um servidor local que simula API Gateway, permitindo testar endpoints HTTP localmente. A API fica disponível por padrão em http://127.0.0.1:3000.
+### 6. O que o comando `sam build` faz?
+**a)** Faz deploy da aplicação  
+**b)** Compila e prepara a aplicação para deployment  
+**c)** Executa testes unitários  
+**d)** Valida o template SAM
 
-### 9. O que é o SAR (Serverless Application Repository)?
-**Resposta:** Repositório público da AWS para compartilhar e descobrir aplicações serverless
+**Resposta:** b) Compila e prepara a aplicação para deployment
 
-**Explicação:** SAR permite que desenvolvedores publiquem aplicações SAM completas para reuso pela comunidade, incluindo metadados como descrição, licença e parâmetros de configuração.
+**Explicação:** `sam build` compila o código, resolve dependências e transforma o template SAM em um template CloudFormation, preparando tudo para deployment.
 
-### 10. Como você especifica dependências de uma função Lambda em SAM?
-**Resposta:** Através da propriedade Layers ou incluindo requirements.txt/package.json no CodeUri
+### 7. Qual seção permite definir configurações globais para todos os recursos de um tipo?
+**a)** `Parameters`  
+**b)** `Globals`  
+**c)** `Defaults`  
+**d)** `Common`
 
-**Explicação:** Dependências podem ser incluídas diretamente no código da função ou organizadas em Layers reutilizáveis. Layers são recomendados para dependências compartilhadas entre múltiplas funções.
+**Resposta:** b) `Globals`
+
+**Explicação:** A seção Globals permite definir propriedades que serão aplicadas a todos os recursos do mesmo tipo, evitando repetição no template.
+
+### 8. O que é o SAR?
+**a)** SAM Application Runtime  
+**b)** Serverless Application Repository  
+**c)** SAM Auto Resolver  
+**d)** Serverless API Resource
+
+**Resposta:** b) Serverless Application Repository
+
+**Explicação:** SAR (Serverless Application Repository) é um repositório público da AWS onde desenvolvedores podem compartilhar e descobrir aplicações serverless prontas para uso.
+
+### 9. Qual diferença entre API e HttpApi em eventos SAM?
+**a)** API é para REST, HttpApi para GraphQL  
+**b)** Não há diferença  
+**c)** HttpApi é mais barato e suporta HTTP/2  
+**d)** API é deprecated
+
+**Resposta:** c) HttpApi é mais barato e suporta HTTP/2
+
+**Explicação:** HttpApi cria um API Gateway HTTP API que é mais barato, mais rápido e suporta HTTP/2, enquanto Api cria um REST API com mais funcionalidades.
+
+### 10. Como SAM Local simula o ambiente Lambda?
+**a)** Usando máquinas virtuais  
+**b)** Usando Docker containers  
+**c)** Executando diretamente no sistema  
+**d)** Conectando com AWS
+
+**Resposta:** b) Usando Docker containers
+
+**Explicação:** SAM Local usa Docker para criar containers que simulam o ambiente de execução Lambda, permitindo testes locais idênticos ao ambiente de produção.
+
+### 11. Qual comando valida um template SAM?
+**a)** `sam check`  
+**b)** `sam validate`  
+**c)** `sam verify`  
+**d)** `sam test`
+
+**Resposta:** b) `sam validate`
+
+**Explicação:** `sam validate` verifica se o template SAM está sintaticamente correto e segue as especificações do SAM/CloudFormation.
+
+### 12. O que acontece quando uma função SAM não especifica um IAM role?
+**a)** Deployment falha  
+**b)** SAM cria automaticamente um role básico  
+**c)** Função executa sem permissões  
+**d)** Usa role padrão da conta
+
+**Resposta:** b) SAM cria automaticamente um role básico
+
+**Explicação:** Quando não especificado, SAM cria automaticamente um IAM role com permissões básicas de execução Lambda (AWSLambdaBasicExecutionRole).
+
+### 13. Qual é a limitação do AWS::Serverless::SimpleTable?
+**a)** Não suporta encryption  
+**b)** Máximo 100 itens  
+**c)** Apenas chave primária simples  
+**d)** Não suporta streams
+
+**Resposta:** c) Apenas chave primária simples
+
+**Explicação:** SimpleTable só suporta uma chave primária simples. Para tabelas com chave composta, GSI/LSI ou configurações avançadas, deve-se usar AWS::DynamoDB::Table.
+
+### 14. Qual evento SAM configura execução periódica (cron)?
+**a)** `Timer`  
+**b)** `Schedule`  
+**c)** `Cron`  
+**d)** `CloudWatchEvent`
+
+**Resposta:** b) `Schedule`
+
+**Explicação:** O tipo de evento `Schedule` permite configurar execução periódica usando expressões rate() ou cron(), criando uma regra CloudWatch Events.
+
+### 15. Como especificar dependências Python em uma função SAM?
+**a)** No template.yaml  
+**b)** Arquivo requirements.txt no CodeUri  
+**c)** Seção Dependencies  
+**d)** Variável de ambiente
+
+**Resposta:** b) Arquivo requirements.txt no CodeUri
+
+**Explicação:** Para Python, as dependências são especificadas em um arquivo requirements.txt dentro do diretório CodeUri. SAM automaticamente instala essas dependências durante o build.
 
 <br />
 
 ## :books: Referências
 
-Para uma compreensão mais profunda sobre SAM recomendo a leitura da documentação oficial:
-
 - [AWS SAM Developer Guide](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/what-is-sam.html)
-- [AWS SAM CLI Reference](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-command-reference.html)
 - [SAM Template Specification](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-specification.html)
-- [Serverless Application Repository](https://docs.aws.amazon.com/serverlessrepo/latest/devguide/what-is-serverlessrepo.html)
-- [AWS SAM Examples](https://github.com/aws/serverless-application-model/tree/master/examples)
+- [SAM Policy Templates](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-policy-templates.html)
+- [SAM CLI Command Reference](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-command-reference.html)
 
 <br />
 
 ---
-Feito com ♥ by :man_astronaut: Guilherme Bezerra :wave: [Entrar em contato!](https://www.linkedin.com/in/gbdsantos/)
