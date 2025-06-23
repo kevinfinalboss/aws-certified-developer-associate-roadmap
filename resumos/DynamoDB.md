@@ -2,7 +2,7 @@
 	<img src="./img/aws-icons/aws-DynamoDB.png" alt="aws-dynamodb-icon" style="height:150px; width:150px;" /> 
   <br />
 	<h1 align="center">
-    DynamoDB
+    DynamoDB - Guia Completo AWS Developer Associate
   </h1>
 </p>	
 
@@ -11,164 +11,709 @@
 ## :pushpin: Índice
 
 - [Introdução](#introdução)
-- [Tabelas](#tabelas)
-- [Keys](#keys)
-- [Modo de capacidade de leitura/gravação](#modo-de-capacidade-de-leituragravação)
-  - [Modo de capacidade provisionado](#modo-de-capacidade-provisionado)
-    - [Write Capacity Units (WCU)](#write-capacity-units-wcu)
-- [Leitura Fortemente Consistente vs Leitura Eventualmente Consistente](#leitura-fortemente-consistente-vs-leitura-eventualmente-consistente)
-  - [Read Capacity Units (RCU)](#read-capacity-units-rcu)
-- [API](#api)
-  - [Gravação/Escrita de dados](#gravaçãoescrita-de-dados)
-  - [Leitura de dados](#leitura-de-dados)
-  - [Apagando dados](#apagando-dados)
-  - [Operações em lote](#operações-em-lote)
-- [Índices secundários](#índices-secundários)
-  - [Global Secondary Index(GSI)](#global-secondary-indexgsi)
-  - [Local Seconday Index(LSI)](#local-seconday-indexlsi)    
+- [Conceitos Fundamentais](#conceitos-fundamentais)
+- [Tabelas e Estrutura de Dados](#tabelas-e-estrutura-de-dados)
+- [Keys (Chaves)](#keys-chaves)
+- [Capacidade de Leitura/Gravação](#capacidade-de-leituragravação)
+  - [Modo Provisionado](#modo-provisionado)
+  - [Modo Sob Demanda](#modo-sob-demanda)
+  - [Auto Scaling](#auto-scaling)
+- [Consistência de Dados](#consistência-de-dados)
+- [API Operations](#api-operations)
+  - [Operações de Escrita](#operações-de-escrita)
+  - [Operações de Leitura](#operações-de-leitura)
+  - [Operações de Exclusão](#operações-de-exclusão)
+  - [Operações em Lote](#operações-em-lote)
+- [Índices Secundários](#índices-secundários)
+- [Streams](#streams)
+- [TTL (Time To Live)](#ttl-time-to-live)
+- [Transações](#transações)
+- [PartiQL](#partiql)
+- [Backup e Restore](#backup-e-restore)
+- [Global Tables](#global-tables)
+- [DAX (DynamoDB Accelerator)](#dax-dynamodb-accelerator)
+- [Segurança](#segurança)
+- [Monitoramento](#monitoramento)
+- [Best Practices](#best-practices)
+- [Pricing](#pricing)
+- [Questões de Prova](#questões-de-prova)
 - [Referências](#books-referências)
 
 <br />
 
 ## Introdução
 
-Amazon **DynamoDB** é um banco de dados NoSQL totalmente gerenciado, altamente disponível.
+Amazon **DynamoDB** é um banco de dados NoSQL totalmente gerenciado, altamente disponível e de baixa latência. É um dos serviços mais importantes para a certificação AWS Developer Associate.
 
-Bancos de dados NoSQL são não relacionais e são distribuídos, permitindo uma escalabilidade horizontal.
+**Características principais:**
+- NoSQL totalmente gerenciado
+- Latência de single-digit milliseconds
+- Escalabilidade automática
+- Integração nativa com outros serviços AWS
+- Disponibilidade de 99.99%
+- Suporte a ACID transactions
 
-Esses bancos de dados não suportam junções de consulta ou tem um suporte muito limitado.
-
-Alguns exemplos de casos de uso para utilizar DynamoDB são em aplicativos mobile, gaming, internet das coisas (ioT), etc.
-
-- NoSQL
-- Uma média de no máximo 9ms para realizar a leitura de uma tabela
-- Data models suportados
-  - document (HTML, JSON, XML)
-  - key-value (Tabelas)
-- Consistency model
-  - eventual consistent reads (padrão)
-  - strong consistent reads
-
-<br />
-
-## Tabelas
-
-O DynamoDB é feito de tabelas(*tables*). Cada tabela tem a sua **chave primária(*primary key*)** que deve ser definido no momento de criação da tabela. 
-Cada tabela pode ter um número infinito de itens(rows) e cada item possui atributos(attributes).
-
-- **Tables**
-  - **Items:** linhas onde há entrada de dados. Pode ter o tamanho máximo de 400 KB
-  - **Atributes:** Fazendo um comparativo com um banco de dados tradicional seriam as colunas
-  - **Key:** É o título de uma coluna
-  - **Value:** É o valor que está contido em uma *key*
-- **Tipos de dados suportados**
-    - **Scalar Types:** Binary, Boolean, Number, Null, String
-    - **Document Types:** List, Map
-    - **SetTypes:** Binary Set, Number Set, String Set
-
-## Keys
-
-- **Primary Key**
-  - **Partition Key:** É um valor único(HASH) na tabela que não pode ser duplicado e você escolhe qual vai ser a sua partition key
-  - **Opção 2 - Partition Key + Sort Key(HASH + Range) = Composite Key:** É a junção de uma partition key mais uma sort key
+**Casos de uso comuns:**
+- Aplicações mobile e web
+- Gaming
+- IoT
+- Real-time analytics
+- Shopping carts
+- Session stores
 
 <br />
 
-## Modo de capacidade de leitura/gravação
+## Conceitos Fundamentais
 
-O DynamoDB disponibilizada dois tipos de modos de capacidade:
+**DynamoDB vs Bancos Relacionais:**
+- Não possui schemas fixos
+- Não suporta JOINs complexos
+- Escalabilidade horizontal automática
+- Performance consistente independente do tamanho
 
-- **Modo Provisionado(Padrão):** Você define de antemão o número de leituras/escritas por segundo e será cobrado pelo quantidade especificada
-- **Modo Sob demanda:** A leitura/escrita é automaticamente escalada de acordo com a carga de trabalho, não é necessário definir de antemão a capacidade e você será cobrado somente pelo que usar mas como tudo que é sob demanda na AWS é mais caro.
+**Modelos de dados suportados:**
+- **Document:** JSON, HTML, XML
+- **Key-Value:** Pares chave-valor simples
 
-Você pode mudar entre os dois modos a cada 24 horas.
+<br />
 
-### Modo de capacidade provisionado
+## Tabelas e Estrutura de Dados
 
-Você deve provisionar a leitura e gravação de unidades de **capacidade de leitura(RCU - *Read* *Capacity Units*)** e unidades de **capacidade de escrita(WCU - *Write Capacity Units*)**.
+### Componentes da Tabela
+
+**Table (Tabela):**
+- Coleção de dados
+- Nome único por região e conta AWS
+- Sem limite de armazenamento
+
+**Item:**
+- Registro individual (equivale a uma linha)
+- Tamanho máximo: **400 KB**
+- Identificado unicamente pela Primary Key
+
+**Attribute:**
+- Campo de dados (equivale a uma coluna)
+- Pode ser obrigatório ou opcional
+- Tipos de dados variados
+
+### Tipos de Dados Suportados
+
+**Scalar Types:**
+- **String (S):** Texto
+- **Number (N):** Inteiros e decimais
+- **Binary (B):** Dados binários
+- **Boolean (BOOL):** True/False
+- **Null (NULL):** Valor nulo
+
+**Document Types:**
+- **List (L):** Array de valores
+- **Map (M):** Objeto JSON
+
+**Set Types:**
+- **String Set (SS):** Conjunto de strings
+- **Number Set (NS):** Conjunto de números
+- **Binary Set (BS):** Conjunto de dados binários
+
+<br />
+
+## Keys (Chaves)
+
+### Primary Key
+
+**Obrigatória para toda tabela. Dois tipos:**
+
+#### 1. Partition Key (Simple Primary Key)
+- **HASH** - Valor único na tabela
+- Determina a partição física onde o item será armazenado
+- Deve ter boa distribuição para evitar hot partitions
+
+#### 2. Composite Primary Key
+- **Partition Key + Sort Key (HASH + RANGE)**
+- Partition Key pode ser duplicada
+- Combinação Partition Key + Sort Key deve ser única
+- Permite consultas range na Sort Key
+
+**Exemplo de estrutura:**
+```
+Partition Key: user_id
+Sort Key: timestamp
+Item: {user_id: "123", timestamp: "2025-01-01", data: "..."}
+```
+
+<br />
+
+## Capacidade de Leitura/Gravação
+
+### Modo Provisionado
+
+**Características:**
+- Você especifica RCU/WCU antecipadamente
+- Preço previsível
+- Suporte a Auto Scaling
+- Pode configurar minimum/maximum capacity
 
 #### Write Capacity Units (WCU)
 
-Uma unidade de **capacidade de escrita(WCU)** representa uma escrita por segundo para um item até de 1 KB de tamanho. Portanto se o seu item for maior que 1 KB, mais WCUs serão consumidas.
+**1 WCU = 1 item de até 1KB por segundo**
 
-- **Exemplo 1:**  está sendo escrito 20 itens por segundo, item com o tamanho de 2KB:
-  - 20 * 2 = 40 * 1 = 40 WCUs
-- **Exemplo 2:** Está sendo escrito 20 itens por segundo, item com o tamanho de 2.5KB(2.5 será arredondado para cima):
-  - 20 * 3 = 60 * 1 = 60 WCS
-- **Exemplo 3:** Está sendo escrito 120 itens **por minuto,** item com o tamanho de 2KB:
-  - (120 / 60(seg) ) * (2KB / 1KB) = 4 WCUs 
+**Cálculos:**
+- Item > 1KB: arredondar para cima
+- Exemplo 1: 10 items/sec de 2KB = 10 × 2 = 20 WCUs
+- Exemplo 2: 6 items/sec de 4.5KB = 6 × 5 = 30 WCUs
 
-<br />
+#### Read Capacity Units (RCU)
 
-## Leitura Fortemente Consistente vs Leitura Eventualmente Consistente
+**1 RCU = 1 strongly consistent read ou 2 eventually consistent reads de até 4KB por segundo**
 
-São dois tipos de modos de leitura para DynamoDB.
+**Cálculos:**
+- Eventually consistent: divide por 2
+- Item > 4KB: arredondar para cima
+- Exemplo 1: 10 strongly consistent reads/sec de 4KB = 10 × 1 = 10 RCUs
+- Exemplo 2: 16 eventually consistent reads/sec de 12KB = (16/2) × (12/4) = 24 RCUs
 
-- **Leitura Eventualmente Consistente(Padrão):** É possível que se obtenha dados desatualizados(por exemplo, caso quando o dado solicitado foi gravado no DynamoDB a pouco tempo) pois a replicação dos dados pelos múltiplas instâncias(servidores) ainda não foi feita
-- **Leitura Fortemente Consistente:** O DynamoDB retornará os dados mais atualizados refletindo as alterações de todas as gravações feitas antes. Na  chamada da API você passará o argumento `ConsistentRead`como `true`
+#### Burst Capacity
+- DynamoDB reserva capacidade extra para picos temporários
+- Não deve ser considerado no planejamento
 
-**Leituras Fortemente Consistente consumem o dobro de RCU**
+#### Adaptive Capacity
+- Redistribui automaticamente capacidade não utilizada
+- Ajuda com hot partitions temporárias
 
-### Read Capacity Units (RCU)
+### Modo Sob Demanda
 
-Uma unidade de capacidade de escrita(RCU) representa **uma leitura consistente** por segundo, ou **duas leituras eventualmente consistentes** por segundo **para um item de até 4KB de tamanho**. ****Portanto se o seu item for maior que 4 KB, mais RCUs serão consumidas.
+**Características:**
+- Escalabilidade automática instantânea
+- Paga apenas pelo que usar
+- Até 2.5x mais caro que provisionado
+- Ideal para workloads imprevisíveis
 
-- **Exemplo 1:**  Está sendo feito 10 leituras fortemente consistente por segundo, item com o tamanho de 4KB:
-  - 10 * (4/4) = 10 RCUs
-- **Exemplo 2:** Está sendo feito 16 leituras eventualmente consistente por segundo, item com o tamanho de 12KB:
-  - (16 / 2) * (12 / 4) = 24 RCUs
-- **Exemplo 3:** Está sendo feito 10 leituras fortemente consistente por segundo, item com o tamanho de 6KB
-  - 10 * (8/4) = 20 RCUs (6KB foram arredondados para 8KB)
+**Request Units:**
+- 1 WRU = 1 WCU
+- 1 RRU = 1 RCU
 
-<br />
+### Auto Scaling
 
-## API
-
-### Gravação/Escrita de dados
-
-- **PutItem:** Cria um novo item ou substitui um item que possui a mesma chave primária. Consome WCUs
-- **UpdateItem:** Edita um atributo de um item existente ou adiciona um novo item se ele não existe. Pode ser usando com Contadores Atômicos(*Atomic Counters*)
-- Escrita Condicional(*Conditional Writes*):
-
-### Leitura de dados
-
-- **GetItem:** Lê um item com base na sua chave primária. Por padrão é feita uma leitura eventualmente consistente, existe a opção de usar a leitura fortemente consistente mas mais RCU será utilizado.
-- **Query:**
-    - KeyConditionExpression
-    - FilterExpression
-- Scan
-
-### Apagando dados
-
-- **DeleteItem:** Apaga um item individual, é possível fazer uma exclusão condicional
-- **DeleteTable:** Apaga a tabela todos os itens contidos nela
-
-### Operações em lote
-
-Também pode-se realizar operações em lote(*batch*) reduzindo assim o número de chamadas na API
-
-- **BatchWriteItem:** Faz a escrita ou exclusão de até 25 itens em uma única chamada. Não pode fazer atualização de itens
-- **BatchGetItem:** Faz a leitura de um ou mais tabelas de até 100 itens
+**Funcionalidades:**
+- Monitora consumo de capacidade
+- Ajusta automaticamente RCU/WCU
+- Define limites mínimo/máximo
+- Baseado em CloudWatch metrics
 
 <br />
 
-## Índices secundários
+## Consistência de Dados
 
-### Global Secondary Index(GSI)
+### Eventually Consistent Reads (Padrão)
+- Retorna dados que podem estar desatualizados
+- Máximo 1 segundo de atraso
+- Consome menos RCU
+- Usar quando dados recentes não são críticos
 
-Os **índices secundários globais** são um alternativa para a chave primária base de uma tabela.
+### Strongly Consistent Reads
+- Retorna sempre os dados mais recentes
+- Consome 2x mais RCU
+- Parâmetro: `ConsistentRead=true`
+- Usar quando dados atuais são críticos
 
-### Local Seconday Index(LSI)
+**Importante:** Strongly consistent reads não estão disponíveis em:
+- Global Secondary Indexes
+- Global Tables cross-region reads
 
-Com **índices secundários locais** você pode consultar dados na tabela usando uma chave alternativa além de consultas só com a chave primária. É permitido criar até 5 índices secundários locais.
+<br />
+
+## API Operations
+
+### Operações de Escrita
+
+#### PutItem
+- Cria novo item ou substitui completamente
+- Consome WCUs baseado no tamanho do item
+- Suporte a Conditional Writes
+
+```python
+response = dynamodb.put_item(
+    TableName='Users',
+    Item={'user_id': '123', 'name': 'João'},
+    ConditionExpression='attribute_not_exists(user_id)'
+)
+```
+
+#### UpdateItem
+- Modifica atributos existentes ou adiciona novos
+- Consome WCUs apenas pelos atributos modificados
+- Suporte a Atomic Counters
+- Operações: SET, ADD, REMOVE, DELETE
+
+```python
+response = dynamodb.update_item(
+    TableName='Users',
+    Key={'user_id': '123'},
+    UpdateExpression='SET #name = :name, #count = #count + :inc',
+    ExpressionAttributeNames={'#name': 'name', '#count': 'login_count'},
+    ExpressionAttributeValues={':name': 'João Silva', ':inc': 1}
+)
+```
+
+#### Conditional Writes
+- Executam apenas se condição for verdadeira
+- Previnem overwrites acidentais
+- Useful para otimistic locking
+
+### Operações de Leitura
+
+#### GetItem
+- Busca item específico pela Primary Key
+- Altamente eficiente (O(1))
+- Suporte a ProjectionExpression
+
+```python
+response = dynamodb.get_item(
+    TableName='Users',
+    Key={'user_id': '123'},
+    ConsistentRead=True,
+    ProjectionExpression='#name, email',
+    ExpressionAttributeNames={'#name': 'name'}
+)
+```
+
+#### Query
+- Busca baseada na Partition Key
+- Opcionalmente filtra pela Sort Key
+- Suporte a filtros adicionais
+- Retorna até 1MB de dados
+- Suporte a paginação
+
+```python
+response = dynamodb.query(
+    TableName='Orders',
+    KeyConditionExpression='user_id = :uid AND order_date BETWEEN :start AND :end',
+    ExpressionAttributeValues={
+        ':uid': '123',
+        ':start': '2025-01-01',
+        ':end': '2025-01-31'
+    }
+)
+```
+
+#### Scan
+- Examina toda a tabela
+- Operação custosa e lenta
+- Suporte a filtros
+- Suporte a Parallel Scans
+- Usar apenas quando necessário
+
+```python
+response = dynamodb.scan(
+    TableName='Users',
+    FilterExpression='age > :age',
+    ExpressionAttributeValues={':age': 25}
+)
+```
+
+**Query vs Scan:**
+- Query: Eficiente, usa índices
+- Scan: Ineficiente, examina todos os items
+
+### Operações de Exclusão
+
+#### DeleteItem
+- Remove item específico
+- Suporte a Conditional Deletes
+- Retorna item deletado se solicitado
+
+```python
+response = dynamodb.delete_item(
+    TableName='Users',
+    Key={'user_id': '123'},
+    ConditionExpression='attribute_exists(user_id)',
+    ReturnValues='ALL_OLD'
+)
+```
+
+### Operações em Lote
+
+#### BatchGetItem
+- Busca até 100 items de uma ou múltiplas tabelas
+- Máximo 16MB de dados
+- Unprocessed keys retornadas se houver throttling
+
+#### BatchWriteItem
+- Escreve/deleta até 25 items
+- Não suporta UpdateItem
+- Máximo 16MB de dados
+- Unprocessed items retornados se houver throttling
+
+**Importante:** Operações batch não são transacionais.
+
+<br />
+
+## Índices Secundários
+
+### Global Secondary Index (GSI)
+
+**Características:**
+- Partition Key e Sort Key diferentes da tabela base
+- Capacidade RCU/WCU independente
+- Eventual consistency apenas
+- Até 20 GSIs por tabela
+- Pode ser criado/deletado após criação da tabela
+
+**Projeções:**
+- **KEYS_ONLY:** Apenas chaves
+- **INCLUDE:** Chaves + atributos específicos
+- **ALL:** Todos os atributos (mais custoso)
+
+### Local Secondary Index (LSI)
+
+**Características:**
+- Mesma Partition Key, Sort Key diferente
+- Compartilha capacidade com tabela base
+- Suporte a strongly consistent reads
+- Até 5 LSIs por tabela
+- Deve ser criado na criação da tabela
+- Limite de 10GB por partition key
+
+<br />
+
+## Streams
+
+**DynamoDB Streams** capturam mudanças na tabela em tempo real.
+
+**Características:**
+- Ordenação por shard
+- Retenção de 24 horas
+- Processamento via Lambda ou Kinesis
+
+**Tipos de informação capturada:**
+- **KEYS_ONLY:** Apenas chaves
+- **NEW_IMAGE:** Item após modificação
+- **OLD_IMAGE:** Item antes da modificação  
+- **NEW_AND_OLD_IMAGES:** Ambos
+
+**Casos de uso:**
+- Analytics em tempo real
+- Replicação de dados
+- Notificações
+- Auditoria
+
+<br />
+
+## TTL (Time To Live)
+
+**Funcionalidades:**
+- Remove automaticamente items expirados
+- Baseado em timestamp Unix
+- Processo em background (até 48h de atraso)
+- Não consome WCUs
+- Items deletados aparecem no Stream
+
+```python
+response = dynamodb.put_item(
+    TableName='Sessions',
+    Item={
+        'session_id': '123',
+        'data': 'session_data',
+        'ttl': int(time.time()) + 3600  # expira em 1 hora
+    }
+)
+```
+
+<br />
+
+## Transações
+
+**ACID Transactions** para múltiplos items/tabelas.
+
+### TransactWriteItems
+- Até 25 operações
+- All-or-nothing
+- Consome 2x WCUs
+
+### TransactGetItems  
+- Até 25 operações
+- Snapshot isolation
+- Consome 2x RCUs
+
+**Casos de uso:**
+- Transferências bancárias
+- Inventory management
+- Operações que requerem consistência
+
+<br />
+
+## PartiQL
+
+**SQL-compatible query language** para DynamoDB.
+
+**Suporte a:**
+- SELECT, INSERT, UPDATE, DELETE
+- Joins limitados
+- Functions e expressions
+
+```sql
+SELECT * FROM Users WHERE age > 25 AND city = 'São Paulo'
+```
+
+<br />
+
+## Backup e Restore
+
+### On-Demand Backup
+- Backup completo manual
+- Sem impacto na performance
+- Retenção até você deletar
+
+### Point-in-Time Recovery (PITR)
+- Backup contínuo automático
+- Restore para qualquer momento nos últimos 35 dias
+- Granularidade de segundos
+
+### Cross-Region Backup
+- Backup em região diferente
+- Disaster recovery
+
+<br />
+
+## Global Tables
+
+**Multi-region, multi-master replication.**
+
+**Características:**
+- Eventual consistency entre regiões
+- Automatic conflict resolution (last writer wins)
+- Requer Streams habilitado
+- RCU/WCU por região
+
+**Casos de uso:**
+- Aplicações globais
+- Disaster recovery
+- Baixa latência global
+
+<br />
+
+## DAX (DynamoDB Accelerator)
+
+**In-memory cache** para DynamoDB.
+
+**Características:**
+- Latência microseconds
+- Throughput 10x maior
+- Cache write-through
+- Multi-AZ
+- Compatible com DynamoDB APIs
+
+**Casos de uso:**
+- Aplicações que requerem latência extremamente baixa
+- Read-heavy workloads
+- Gaming leaderboards
+
+<br />
+
+## Segurança
+
+### IAM
+- Políticas baseadas em recursos
+- Fine-grained access control
+- Condition keys específicas
+
+### Encryption
+- **At rest:** Encryption automática (AWS owned, managed, customer managed keys)
+- **In transit:** TLS 1.2
+
+### VPC Endpoints
+- Acesso privado via VPC
+- Sem tráfego internet
+
+<br />
+
+## Monitoramento
+
+### CloudWatch Metrics
+- **ConsumedReadCapacityUnits/ConsumedWriteCapacityUnits**
+- **ProvisionedReadCapacityUnits/ProvisionedWriteCapacityUnits**
+- **ReadThrottleEvents/WriteThrottleEvents**
+- **SystemErrors/UserErrors**
+
+### CloudTrail
+- API calls logging
+- Compliance e auditoria
+
+<br />
+
+## Best Practices
+
+### Design da Tabela
+- Use partition keys com boa distribuição
+- Evite hot partitions
+- Prefira composite keys quando apropriado
+
+### Performance
+- Use ProjectionExpression para reduzir dados transferidos
+- Prefira Query sobre Scan
+- Use GSI para access patterns diferentes
+
+### Cost Optimization
+- Use TTL para limpeza automática
+- Monitore capacidade não utilizada
+- Considere Reserved Capacity para workloads previsíveis
+
+<br />
+
+## Pricing
+
+### Modo Provisionado
+- **RCU:** $0.00013 por hora
+- **WCU:** $0.00065 por hora
+- **Storage:** $0.25 por GB/mês
+
+### Modo Sob Demanda
+- **RRU:** $0.25 por milhão
+- **WRU:** $1.25 por milhão
+
+### Custos Adicionais
+- **GSI:** RCU/WCU separadas
+- **Backup:** $0.10 per GB/mês
+- **Streams:** $0.02 per 100K records
+
+<br />
+
+## Questões de Prova
+
+### Questão 1
+**Cenário:** Uma aplicação precisa armazenar dados de sessão de usuário com expiração automática após 30 minutos de inatividade.
+
+**Qual é a melhor abordagem?**
+
+A) Usar Lambda function para deletar sessões expiradas  
+B) Configurar TTL no DynamoDB  
+C) Usar CloudWatch Events para limpeza  
+D) Implementar lógica na aplicação  
+
+**Resposta:** B) Configurar TTL no DynamoDB
+**Explicação:** TTL é a funcionalidade nativa do DynamoDB para expiração automática de items, não consome WCUs e é a solução mais eficiente.
+
+### Questão 2
+**Cenário:** Uma tabela DynamoDB está experienciando throttling frequente em uma partition específica durante picos de tráfego.
+
+**Qual das seguintes opções resolve o problema?**
+
+A) Aumentar RCU/WCU globalmente  
+B) Usar Adaptive Capacity  
+C) Redesenhar a partition key para melhor distribuição  
+D) Todas as anteriores  
+
+**Resposta:** D) Todas as anteriores
+**Explicação:** Todas são válidas, mas C é a solução definitiva para hot partitions.
+
+### Questão 3
+**Cenário:** Você precisa implementar um contador que incrementa a cada visualização de página, garantindo precisão mesmo com alta concorrência.
+
+**Qual operação usar?**
+
+A) GetItem seguido de PutItem  
+B) UpdateItem com ADD operation  
+C) TransactWriteItems  
+D) BatchWriteItem  
+
+**Resposta:** B) UpdateItem com ADD operation
+**Explicação:** ADD operation é atomic e thread-safe para contadores.
+
+### Questão 4
+**Cenário:** Uma aplicação precisa buscar todos os pedidos de um usuário específico ordenados por data.
+
+**Qual é a melhor estrutura de chave?**
+
+A) Partition Key: order_id, Sort Key: user_id  
+B) Partition Key: user_id, Sort Key: order_date  
+C) Partition Key: order_date, Sort Key: user_id  
+D) Usar apenas Partition Key: user_id  
+
+**Resposta:** B) Partition Key: user_id, Sort Key: order_date
+**Explicação:** Permite buscar todos os pedidos de um usuário (Query na partition key) ordenados por data (sort key).
+
+### Questão 5
+**Cenário:** Uma aplicação global precisa de baixa latência de leitura em múltiplas regiões com dados eventualmente consistentes.
+
+**Qual solução usar?**
+
+A) DynamoDB com DAX em cada região  
+B) Global Tables  
+C) Cross-region replication via Lambda  
+D) ElastiCache em cada região  
+
+**Resposta:** B) Global Tables
+**Explicação:** Global Tables fornece replicação multi-region nativa com eventual consistency.
+
+### Questão 6
+**Cenário:** Você precisa processar mudanças em uma tabela DynamoDB em tempo real para atualizar um índice de busca.
+
+**Qual abordagem usar?**
+
+A) Polling regular da tabela  
+B) DynamoDB Streams com Lambda  
+C) CloudWatch Events  
+D) SQS polling  
+
+**Resposta:** B) DynamoDB Streams com Lambda
+**Explicação:** Streams capturam mudanças em tempo real e Lambda pode processar automaticamente.
+
+### Questão 7
+**Cenário:** Uma consulta DynamoDB retorna "ProvisionedThroughputExceededException".
+
+**Quais são as possíveis causas?**
+
+A) Hot partition  
+B) Capacidade insuficiente  
+C) Burst capacity esgotada  
+D) Todas as anteriores  
+
+**Resposta:** D) Todas as anteriores
+**Explicação:** Throttling pode ocorrer por qualquer uma dessas razões.
+
+### Questão 8
+**Cenário:** Você precisa implementar uma operação que atualiza inventory e cria um pedido atomicamente.
+
+**Qual abordagem usar?**
+
+A) UpdateItem seguido de PutItem  
+B) TransactWriteItems  
+C) BatchWriteItem  
+D) Duas operações separadas  
+
+**Resposta:** B) TransactWriteItems
+**Explicação:** Transações garantem atomicidade (all-or-nothing) para múltiplas operações.
+
+### Questão 9
+**Cenário:** Uma aplicação faz muitas consultas por um atributo que não é parte da primary key.
+
+**Qual é a melhor solução?**
+
+A) Usar Scan com FilterExpression  
+B) Criar Global Secondary Index  
+C) Reestruturar a primary key  
+D) Usar multiple GetItem calls  
+
+**Resposta:** B) Criar Global Secondary Index
+**Explicação:** GSI permite queries eficientes em atributos não-chave.
+
+### Questão 10
+**Cenário:** Uma tabela DynamoDB precisa suportar queries range em timestamps para relatórios, mas a primary key é user_id.
+
+**Qual solução usar?**
+
+A) Usar Scan com FilterExpression  
+B) Criar GSI com timestamp como sort key  
+C) Criar LSI com timestamp como sort key  
+D) Reestruturar a tabela completamente  
+
+**Resposta:** B) Criar GSI com timestamp como sort key
+**Explicação:** GSI permite different access patterns. LSI requer mesma partition key.
 
 <br />
 
 ## :books: Referências
 
-Para uma compreensão mais profunda sobre DynamoDB recomendo a leitura da documentação oficial, os links estão abaixo.
-
-- [O que é o Amazon DynamoDB?](https://docs.aws.amazon.com/pt_br/amazondynamodb/latest/developerguide/Introduction.html)
-- [Modo de capacidade de leitura/gravação](https://docs.aws.amazon.com/pt_br/amazondynamodb/latest/developerguide/HowItWorks.ReadWriteCapacityMode.html)
-- [Consistência de leituras](https://docs.aws.amazon.com/pt_br/amazondynamodb/latest/developerguide/HowItWorks.ReadConsistency.html)   
-- [Índices secundários](https://docs.aws.amazon.com/pt_br/amazondynamodb/latest/developerguide/HowItWorks.CoreComponents.html#HowItWorks.CoreComponents.SecondaryIndexes)
+- [Amazon DynamoDB Developer Guide](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/)
+- [DynamoDB Best Practices](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/best-practices.html)
+- [DynamoDB API Reference](https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/)
+- [AWS Well-Architected Framework - DynamoDB](https://docs.aws.amazon.com/wellarchitected/latest/reliability-pillar/dynamodb.html)
